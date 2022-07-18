@@ -1,0 +1,124 @@
+﻿<Window x:Class="TDG_Vision.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TDG_Vision"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="1000" Width="1810" Closing="Window_Closing" Loaded="Window_Loaded" AllowsTransparency="True" WindowStyle="None" MouseMove="Window_MouseMove">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="11*"/>
+            <ColumnDefinition Width="34*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="23*"/>
+        </Grid.RowDefinitions>
+        <Label x:Name="labDatetime" Content="date time" HorizontalAlignment="Left" Margin="0,37,0,0" VerticalAlignment="Top" Height="40" Width="220" VerticalContentAlignment="Center" FontSize="18" Background="Black" Foreground="White"/>
+        <Label x:Name="labRecipe" Content="recipe infor" HorizontalAlignment="Left" Margin="220,37,0,0" VerticalAlignment="Top" Height="40" Width="220" VerticalContentAlignment="Center" FontSize="18" Background="Black" Foreground="White"/>
+        <DockPanel x:Name="dpTitle" Margin="0,0,0,45" Background="#FF7BDEFF" MouseMove="dpTitle_MouseMove" Grid.ColumnSpan="2" >
+            <Label Content="TDG-NB vision system" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Height="40" Width="300" VerticalContentAlignment="Center" FontSize="24"/>
+            <Ellipse Stroke="Black" Width="30" Fill="#FFB9B9B9" Height="30" DockPanel.Dock="Left" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" MouseLeftButtonUp="Ellipse_MouseLeftButtonUp"/>
+        </DockPanel>
+        <TextBlock x:Name="tbMessage" HorizontalAlignment="Center" Grid.Row="1" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Height="920" Width="440" FontSize="18" Background="Gainsboro" Padding="5,0,0,0"/>
+        <Canvas x:Name="canvLeft" Grid.Column="1" HorizontalAlignment="Left" Height="510" VerticalAlignment="Top" Width="680" Margin="2,37,0,0" Panel.ZIndex="3" Grid.RowSpan="2" MouseDown="canvLeft_MouseDown" MouseEnter="canvLeft_MouseEnter" MouseLeave="canvLeft_MouseLeave"/>
+        <Image x:Name="imgLeft" Grid.Column="1" HorizontalAlignment="Left" Height="510" VerticalAlignment="Top" Width="680" Margin="2,37,0,0" Panel.ZIndex="2" Grid.RowSpan="2" Stretch="Fill" ScrollViewer.VerticalScrollBarVisibility="Disabled" MouseUp="imgLeft_MouseUp"/>
+        <Rectangle Grid.Column="1" HorizontalAlignment="Left" Height="510" Stroke="Black" VerticalAlignment="Top" Width="680" Fill="#FF505050" Panel.ZIndex="1" Margin="2,37,0,0" Grid.RowSpan="2"/>
+        <Image x:Name="imgRight" Grid.Column="1" HorizontalAlignment="Left" Height="510" VerticalAlignment="Top" Width="680" Margin="684,37,0,0" Panel.ZIndex="2" Grid.RowSpan="2"/>
+        <Rectangle Grid.Column="1" HorizontalAlignment="Left" Height="510" Stroke="Black" VerticalAlignment="Top" Width="680" Fill="#FF505050" Panel.ZIndex="1" Margin="684,37,0,0" Grid.RowSpan="2"/>
+        <TextBox x:Name="tbxOfsetX" Grid.Column="1" HorizontalAlignment="Left" Margin="139,473,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="X (mm)" HorizontalAlignment="Left" Margin="79,470,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <Label Grid.Column="1" Content="Offset" HorizontalAlignment="Left" Margin="3,470,0,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="18" FontWeight="Normal"/>
+        <TextBox x:Name="tbxOfsetY" Grid.Column="1" HorizontalAlignment="Left" Margin="139,498,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="Y (mm)" HorizontalAlignment="Left" Margin="79,495,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <TextBox x:Name="tbxOfsetT" Grid.Column="1" HorizontalAlignment="Left" Margin="139,522,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="T (deg)" HorizontalAlignment="Left" Margin="79,519,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <TextBox x:Name="tbxDelay" Grid.Column="1" HorizontalAlignment="Left" Margin="932,473,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="delay time(s)" Margin="838,470,440,0" Grid.Row="1" VerticalAlignment="Top" Width="90"/>
+        <Label x:Name="labToolCalibData" Grid.Column="1" Content="X resolution:" HorizontalAlignment="Left" Margin="120,601,0,0" Grid.Row="1" VerticalAlignment="Top" Width="230" Height="150" Visibility="Hidden" Background="#FFFFECEC" Panel.ZIndex="2"/>
+        <Button x:Name="btnSave" Grid.Column="1" Content="Save" Margin="1065,470,215,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="88" Click="btnSave_Click"/>
+        <Rectangle x:Name="rectToolLmark1" Margin="80,624,1188,196" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#3300FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolLmark1" Margin="80,624,1188,196" Grid.Column="1" Grid.Row="1" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Rectangle x:Name="rectToolLmark2" Margin="185,624,1083,196" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#4C00FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolLmark2" Margin="185,624,1083,196" Grid.Column="1" Grid.Row="1" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Rectangle x:Name="rectToolLmark3" Margin="290,624,978,196" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#4C00FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolLmark3"  Grid.Column="1" Grid.Row="1" Margin="290,624,978,196" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Label Grid.Column="1" Content="L Mark" HorizontalAlignment="Left" Margin="5,636,0,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="18" FontWeight="Normal"/>
+        <Rectangle x:Name="rectToolRmark1" Margin="80,734,1188,86" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#4C00FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolRmark1" Margin="80,734,1188,86" Grid.Column="1" Grid.Row="1" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Rectangle x:Name="rectToolRmark2" Margin="185,734,1083,86" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#4C00FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolRmark2" Margin="185,734,1083,86" Grid.Column="1" Grid.Row="1" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Rectangle x:Name="rectToolRmark3" Margin="290,734,978,86" Width="100" Height="100" Grid.Column="1" Grid.Row="1" Fill="#4C00FF00" Panel.ZIndex="1" Stroke="Black" Visibility="Hidden" MouseUp="rect_MouseUp"/>
+        <Image x:Name="imgToolRmark3" Margin="290,734,978,86" Grid.Column="1" Grid.Row="1" Width="100" Height="100" MouseUp="img_MouseUp"/>
+        <Label Grid.Column="1" Content="R Mark" HorizontalAlignment="Left" Margin="5,746,0,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="18" FontWeight="Normal"/>
+        <Button x:Name="btnMarkCreate" Grid.Column="1" Content="Create" HorizontalAlignment="Left" Margin="729,604,0,0" Grid.Row="1" VerticalAlignment="Top" Height="70" Width="120" Click="btnMarkCreate_Click"/>
+        <Button x:Name="btnMarkEnable" Grid.Column="1" Content="Enable" HorizontalAlignment="Left" Margin="729,684,0,0" Grid.Row="1" VerticalAlignment="Top" Height="70" Width="120" Click="btnMarkEnable_Click"/>
+        <Button x:Name="btnMarkDelete" Grid.Column="1" Content="Delete" HorizontalAlignment="Left" Margin="729,764,0,0" Grid.Row="1" VerticalAlignment="Top" Height="70" Width="120" Click="btnMarkDelete_Click"/>
+        <ListView x:Name="lvRecipe" Grid.Column="1" Grid.Row="1" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="948,625,5,5" MouseDoubleClick="lvRecipe_MouseDoubleClick">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Recipe Code" Width="100" DisplayMemberBinding="{Binding Code}"/>
+                    <GridViewColumn Header="Recipe Name" Width="100" DisplayMemberBinding="{Binding Name}"/>
+                    <GridViewColumn x:Name="A0" Header="Action" Width="200">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Active" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" Height="30" Width="50" Click="ButtonActive_Click"/>
+                                    <Button Content="Copy" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Height="30" Width="50" Click="ButtonCopy_Click"/>
+                                    <Button Content="Delete" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Height="30" Width="50" Click="ButtonDelete_Click"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+
+        </ListView>
+        <TextBox x:Name="tbxRecipeName" Grid.Column="1" HorizontalAlignment="Left" Margin="1063,595,0,0" Grid.Row="1" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120" Height="25" VerticalContentAlignment="Center"/>
+        <Button x:Name="btnCreateRecipe" Grid.Column="1" Content="Create" HorizontalAlignment="Left" Margin="1195,595,0,0" Grid.Row="1" VerticalAlignment="Top" Height="25" Width="88" Click="btnCreateRecipe_Click"/>
+        <Label Grid.Column="1" Content="Recipe Name:" HorizontalAlignment="Left" Margin="953,595,0,0" Grid.Row="1" VerticalAlignment="Top" Width="100"/>
+        <TextBox x:Name="tbxSpecX" Grid.Column="1" HorizontalAlignment="Left" Margin="403,473,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="X (mm)" HorizontalAlignment="Left" Margin="343,470,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <Label Grid.Column="1" Content="Spec." HorizontalAlignment="Left" Margin="267,470,0,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="18" FontWeight="Normal"/>
+        <TextBox x:Name="tbxSpecY" Grid.Column="1" HorizontalAlignment="Left" Margin="403,498,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="Y (mm)" HorizontalAlignment="Left" Margin="343,495,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <TextBox x:Name="tbxSpecT" Grid.Column="1" HorizontalAlignment="Left" Margin="403,522,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="T (deg)" HorizontalAlignment="Left" Margin="343,519,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <TextBox x:Name="tbxYmap" Grid.Column="1" HorizontalAlignment="Left" Margin="932,521,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="Y - map" Margin="840,518,452,0" Grid.Row="1" VerticalAlignment="Top" Width="76"/>
+        <CheckBox x:Name="cbYmap" Grid.Column="1" Content="Use Y map" Margin="843,499,421,0" Grid.Row="1" VerticalAlignment="Top" Width="104"/>
+        <Label x:Name="labTool" Grid.Column="1" Content="Tool" HorizontalAlignment="Left" Margin="197,573,0,0" Grid.Row="1" VerticalAlignment="Top" Height="35" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" FontWeight="Normal" MouseEnter="labTool_MouseEnter" MouseLeave="labTool_MouseLeave"/>
+        <Label x:Name="labStageCalibData" Grid.Column="1" Content="X resolution:" HorizontalAlignment="Left" Margin="446,601,0,0" Grid.Row="1" VerticalAlignment="Top" Width="230" Height="210" Background="#FFFFECEC"/>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="406,624,862,196" Width="100" Height="100">
+            <Image x:Name="imgStageLmark1" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="511,624,757,196" Width="100" Height="100">
+            <Image x:Name="imgStageLmark2" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="616,624,652,196" Width="100" Height="100">
+            <Image x:Name="imgStageLmark3" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="406,734,862,86" Width="100" Height="100">
+            <Image x:Name="imgStageRmark1" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="511,734,757,86" Width="100" Height="100">
+            <Image x:Name="imgStageRmark2" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1" Grid.Row="1" Margin="616,734,652,86" Width="100" Height="100">
+            <Image x:Name="imgStageRmark3" Margin="0,0,0,0" Width="100" Height="100"/>
+        </Border>
+        <Label x:Name="labStage" Grid.Column="1" Content="Stage" HorizontalAlignment="Left" Margin="524,573,0,0" Grid.Row="1" VerticalAlignment="Top" Height="35" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" FontWeight="Normal"/>
+        <TextBox x:Name="tbxCalibX" Grid.Column="1" Margin="667,473,581,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="X (mm)" HorizontalAlignment="Left" Margin="610,470,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <Label Grid.Column="1" Content="Calib." HorizontalAlignment="Left" Margin="534,470,0,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="70" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="18" FontWeight="Normal"/>
+        <TextBox x:Name="tbxCalibY" Grid.Column="1" Margin="667,498,581,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="Y (mm)" HorizontalAlignment="Left" Margin="610,495,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <TextBox x:Name="tbxCalibT" Grid.Column="1" Margin="667,522,581,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Label Grid.Column="1" Content="T (deg)" HorizontalAlignment="Left" Margin="610,519,0,0" Grid.Row="1" VerticalAlignment="Top" Width="54"/>
+        <Button x:Name="btnMarkTest" Grid.Column="1" Content="Test" HorizontalAlignment="Left" Margin="729,842,0,0" Grid.Row="1" VerticalAlignment="Top" Height="70" Width="120" Click="btnMarkTest_Click"/>
+        <Button x:Name="btnLarge" Grid.Column="1" Content="Large" HorizontalAlignment="Left" Margin="588,840,0,0" Grid.Row="1" VerticalAlignment="Top" Height="70" Width="120" Click="btnLarge_Click"/>
+        <Button x:Name="btnAmplify" Grid.Column="1" Content="Amplify" Margin="1275,470,5,0" Grid.Row="1" VerticalAlignment="Top" Height="75" Width="88" Click="btnAmplify_Click" Background="#FFDDDDDD"/>
+
+    </Grid>
+</Window>

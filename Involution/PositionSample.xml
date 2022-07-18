@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<PositionRecipe>
+	<Axises BasicUnit="mm" BasicMultiple="0.0001" ModelUnit="mm" ModelMultiple="0.0001" 
+		  UserUnit="mm" UserMultiple="0.0001" SpeedUnit="mm/s" SpeedMultiple="0.01">
+		<Axis Code="21" Name="PlasmaX" Page="3030" Basic="18" Model="75" User="18" Speed="31">
+			<Node Index="1" Name=""></Node>
+			<Node Index="2" Name=""></Node>
+			<Node Index="3" Name=""></Node>
+			<Node Index="4" Name=""></Node>
+			<Node Index="5" Name=""></Node>
+			<Node Index="6" Name=""></Node>
+			<Node Index="7" Name=""></Node>
+			<Node Index="8" Name=""></Node>
+			<Node Index="9" Name=""></Node>
+			<Node Index="10" Name=""></Node>
+			<Node Index="11" Name=""></Node>
+			<Node Index="12" Name=""></Node>
+			<Node Index="13" Name=""></Node>
+			<Node Index="14" Name=""></Node>
+			<Node Index="15" Name=""></Node>
+			<Node Index="16" Name=""></Node>
+			<Node Index="17" Name=""></Node>
+			<Node Index="18" Name=""></Node>
+			<Node Index="19" Name=""></Node>
+			<Node Index="20" Name=""></Node>
+		</Axis>
+	</Axises>
+	
+</PositionRecipe>

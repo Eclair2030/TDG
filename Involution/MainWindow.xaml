@@ -1,0 +1,49 @@
+﻿<Window x:Class="Involution.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Involution"
+        mc:Ignorable="d"
+        Title="Involution" Height="450" Width="1384" Loaded="Window_Loaded" Closing="Window_Closing" AllowsTransparency="True" WindowStyle="None" BorderThickness="0" BorderBrush="Black" Background="#FFFAFAFA">
+    <Grid>
+        <Ellipse x:Name="eLight" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="50" Margin="17,50,0,0" Stroke="Black" VerticalAlignment="Top" Width="50"/>
+        <Label x:Name="labMsg" Content="Label" HorizontalAlignment="Left" Margin="92,50,0,0" VerticalAlignment="Top" Height="50" Width="850" FontSize="30"/>
+        <Button x:Name="btnRead" Content="获取所有数据" HorizontalAlignment="Left" Margin="972,50,0,0" VerticalAlignment="Top" Width="135" Height="50" Click="Btn_Click"/>
+        <Button x:Name="btnWrite" Content="Write" HorizontalAlignment="Left" Margin="1202,114,0,0" VerticalAlignment="Top" Width="160" Height="55" Click="Btn_Click"/>
+        <Button x:Name="btnTrig" Content="PLC Trigger On" HorizontalAlignment="Left" Margin="1202,319,0,0" VerticalAlignment="Top" Width="160" Height="55" Click="Btn_Click"/>
+        <Button x:Name="btnEdit" Content="Edit" HorizontalAlignment="Left" Margin="1202,179,0,0" VerticalAlignment="Top" Width="160" Height="55" Click="Btn_Click"/>
+        <Button x:Name="btnTrigOff" Content="PLC Trigger Off" HorizontalAlignment="Left" Margin="1202,384,0,0" VerticalAlignment="Top" Width="160" Height="55" Click="Btn_Click"/>
+        <TextBox x:Name="tbValue" HorizontalAlignment="Left" Height="23" Margin="1202,249,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="160"/>
+        <ScrollViewer x:Name="svMsg" HorizontalAlignment="Left" Height="305" Margin="19,118,0,0" VerticalAlignment="Top" Width="1090">
+            <TextBlock x:Name="tbMessage" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="1325" Width="1070" FontSize="20">
+                <TextBlock.Background>
+                    <ImageBrush ImageSource="Hun.png" Stretch="None" Viewport="0,0,0.4,0.4" TileMode="Tile" Opacity="0.3">
+                        <ImageBrush.Transform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform Angle="8"/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </ImageBrush.Transform>
+                    </ImageBrush>
+                </TextBlock.Background>
+            </TextBlock>
+        </ScrollViewer>
+        <DockPanel x:Name="dpTital" HorizontalAlignment="Left" Height="35" LastChildFill="False" VerticalAlignment="Top" Width="1385" Background="#FFCFCFCF" Margin="0,0,0,0" MouseMove="DpTital_MouseMove">
+            <Label x:Name="title" Content="Involution" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Height="30" Width="200" FontSize="18"/>
+            <Ellipse x:Name="elMin" HorizontalAlignment="Left" Height="30" Margin="1080,0,0,0" Stroke="Black" VerticalAlignment="Center" Width="30" MouseUp="ElMin_MouseUp">
+                <Ellipse.Fill>
+                    <ImageBrush ImageSource="btnMin.bmp"/>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse x:Name="elClose" HorizontalAlignment="Left" Height="30" Margin="10,0,0,0" Stroke="Black" VerticalAlignment="Center" Width="30" MouseUp="ElClose_MouseUp">
+                <Ellipse.Fill>
+                    <ImageBrush ImageSource="btnClose.bmp"/>
+                </Ellipse.Fill>
+            </Ellipse>
+        </DockPanel>
+        <Button x:Name="btnTT" Content="test" HorizontalAlignment="Left" Margin="1130,50,0,0" VerticalAlignment="Top" Width="135" Height="50" Click="Btn_Click"/>
+    </Grid>
+</Window>

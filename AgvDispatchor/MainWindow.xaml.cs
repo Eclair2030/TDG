@@ -36,9 +36,15 @@ namespace AgvDispatchor
         DbAccess DB;
         MessageManager MM;
 
+        List<Lifter> LIFTERS;               //升降机列表
+
+        int SLEEP_TIME;
+
         public MainWindow()
         {
             InitializeComponent();
+            LIFTERS = new List<Lifter>();
+            SLEEP_TIME = 2000;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -68,17 +74,21 @@ namespace AgvDispatchor
                 {
                     MM.AddText("Data base open success", MessageType.Result);
                 }));
-                string[] codes = DB.GetAllRetriveLiftersWithType(LifterType.Retrive);
-                if (codes != null)
+                LIFTERS = DB.GetAllRetriveLiftersWithType(LifterType.None);
+                if (LIFTERS.Count > 0)
                 {
-                    for (int i = 0; i < codes.Length; i++)
+                    for (int i = 0; i < LIFTERS.Count; i++)
                     {
-                        string carrierCode = DB.QueryCarriersAtLifter(CarrierStatus.Retrieving, codes[i]);
-                        if (carrierCode != string.Empty)
+                        Thread thOneLift;
+                        if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
                         {
-                            Thread th1 = new Thread(OneLift);
-                            th1.Start();
+                            thOneLift = new Thread(OneRetriveLift);
                         }
+                        else
+                        {
+                            thOneLift = new Thread(OneRetriveLift);
+                        }
+                        thOneLift.Start(LIFTERS[i]);
                     }
                 }
                 else
@@ -98,16 +108,37 @@ namespace AgvDispatchor
             }
         }
 
-        private void OneLift()
+        private void OneRetriveLift(object code)
         {
-            for (int i = 0; i < 10; i++)
+            Lifter lifter = code as Lifter;
+            while (true)
             {
-                Thread.Sleep(1000);
-                Dispatcher.Invoke(new Action(() =>
+                string strResult = DB.ExistCarriersAtLifter(lifter.Code);
+                if (strResult != null && strResult != string.Empty)
                 {
-                    MM.AddText("here is lifter 1", MessageType.Default);
-                }));
+                    if (lifter.Status == ((int)LifterStatus.Idle).ToString())
+                    {
+                        if (DB.SetLifterStatus(LifterStatus.Fall, lifter.Code))             //还要加上执行升降机下降操作的代码
+                        {
+
+                        }
+                        else
+                        {
+                            Dispatcher.Invoke(new Action(() =>{ MM.AddText(lifter.Code + " action fail at" + LifterStatus.Fall, MessageType.Error); }));
+                            Thread.Sleep(SLEEP_TIME);
+                        }
+                    }
+                }
+                else
+                {
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        MM.AddText("there is no carrier at lifter right now", MessageType.Default);
+                    }));
+                    Thread.Sleep(SLEEP_TIME);
+                }
             }
+            
             
         }
         

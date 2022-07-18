@@ -30,7 +30,8 @@ namespace AgvDispatchor
 
     public enum LifterType
     {
-        Retrive = 1,
-        Supply = 2,
+        None = 0,
+        Retrive = 1,                    //回收升降机
+        Supply = 2,                     //来料升降机
     }
 }

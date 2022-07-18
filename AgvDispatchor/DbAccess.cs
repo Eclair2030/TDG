@@ -40,54 +40,71 @@ namespace AgvDispatchor
             {
                 reader[0].ToString();
             }
-
+            reader.Close();
+            com.Dispose();
             return res;
         }
 
-        public string[] GetAllRetriveLiftersWithType(LifterType type)
+        public List<Lifter> GetAllRetriveLiftersWithType(LifterType type)
         {
-            string sql = "select code from Lifters where Type = " + (int)type;
+            List<Lifter> lifters = new List<Lifter>(0);
+            string sql = "select code from Lifters";
+            if (type != LifterType.None)
+            {
+                sql += " where Type = " + (int)type;
+            }
+            
             if (CONN.State == System.Data.ConnectionState.Open)
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
                 SqlDataReader reader = com.ExecuteReader();
                 if (reader != null && reader.HasRows)
                 {
-                    string[] retriveLifters = new string[0];
                     while (reader.Read())
                     {
-                        retriveLifters.Append(reader[0]);
+                        Lifter lifter = new Lifter();
+                        lifter.Code = reader["Code"].ToString();
+                        lifter.Type = reader["Type"].ToString();
+                        lifter.Status = reader["Status"].ToString();
+                        lifter.Parking = reader["Parking"].ToString();
+                        lifters.Add(lifter);
                     }
-                    reader.Close();
-                    return retriveLifters;
                 }
-                else
-                {
-                    reader.Close();
-                    return null;
-                }
+                reader.Close();
+                com.Dispose();
+            }
+            return lifters;
+        }
+
+        public string ExistCarriersAtLifter(string liftCode)
+        {
+            string sql = "select count(*) from Lifters where Parking = 2 and Code = '" + liftCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object obj = com.ExecuteScalar();
+                string res = ( obj != null && obj.ToString() != string.Empty ) ? obj.ToString() : string.Empty;
+                com.Dispose();
+                return res;
             }
             else
             {
                 return null;
             }
-            
         }
 
-        public string QueryCarriersAtLifter(CarrierStatus status, string liftCode)
+        public bool SetLifterStatus(LifterStatus status, string code)
         {
-            string sql = "select c.Code from Carriers as c inner join LifterQueue as l on c.Status = " + (int)status  + " and l.CarrierCode = c.Code and l.Code = '"+ liftCode  + "'";
+            bool res = false;
+            string sql = "update lifters set status = "+ (int)status + " where Code = '"+ code + "'";
             if (CONN.State == System.Data.ConnectionState.Open)
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
-                object obj = com.ExecuteScalar();
-                string res = obj != null ? obj.ToString() : string.Empty;
-                return res;
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
             }
-            else
-            {
-                return string.Empty;
-            }
+            return res;
         }
 
 

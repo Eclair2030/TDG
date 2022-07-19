@@ -37,14 +37,19 @@ namespace AgvDispatchor
         MessageManager MM;
 
         List<Lifter> LIFTERS;               //升降机列表
+        List<Carrier> CARRIES;          //搬送车列表
 
+        bool CARRIER_CIRCLE;
+        string SELECT_CARRIER_CODE;
         int SLEEP_TIME;
 
         public MainWindow()
         {
             InitializeComponent();
             LIFTERS = new List<Lifter>();
-            SLEEP_TIME = 2000;
+            CARRIES = new List<Carrier>();
+            CARRIER_CIRCLE = true;
+            SLEEP_TIME = 5000;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -53,6 +58,8 @@ namespace AgvDispatchor
             {
                 TH_LIFT.Abort();
             }
+            CARRIER_CIRCLE = false;
+            DB.Close();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -62,48 +69,55 @@ namespace AgvDispatchor
 
             MM = new MessageManager(tbMessage, slView, 20, 99);
             DB = new DbAccess();
+            if (DB.Open())
+            {
+                ShowCallbackMessage("Data base open success", MessageType.Result);
+            }
+            else
+            {
+                ShowCallbackMessage("Data base open fail", MessageType.Error);
+            }
             TH_LIFT = new Thread(LifterAction);
             TH_LIFT.Start();
+            TH_CARRIER = new Thread(AllCarrierAction);
+            TH_CARRIER.Start();
+        }
+
+        public void ShowCallbackMessage(string msg, MessageType mt)
+        {
+            try
+            {
+                Dispatcher.Invoke(new Action(() =>{ MM.AddText(msg, mt); }));
+            }
+            catch (Exception)
+            {
+            }
         }
 
         private void LifterAction()
         {
-            if (DB.Open())
+            LIFTERS = DB.GetAllRetriveLiftersWithType(LifterType.None);
+            if (LIFTERS.Count > 0)
             {
-                Dispatcher.Invoke(new Action(() => 
+                for (int i = 0; i < LIFTERS.Count; i++)
                 {
-                    MM.AddText("Data base open success", MessageType.Result);
-                }));
-                LIFTERS = DB.GetAllRetriveLiftersWithType(LifterType.None);
-                if (LIFTERS.Count > 0)
-                {
-                    for (int i = 0; i < LIFTERS.Count; i++)
+                    Thread thOneLift;
+                    if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
                     {
-                        Thread thOneLift;
-                        if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
-                        {
-                            thOneLift = new Thread(OneRetriveLift);
-                        }
-                        else
-                        {
-                            thOneLift = new Thread(OneRetriveLift);
-                        }
-                        thOneLift.Start(LIFTERS[i]);
+                        thOneLift = new Thread(OneRetriveLift);
                     }
-                }
-                else
-                {
-                    Dispatcher.Invoke(new Action(() =>
+                    else
                     {
-                        MM.AddText("thers is no retrive lifter exist", MessageType.Exception);
-                    }));
+                        thOneLift = new Thread(OneRetriveLift);
+                    }
+                    thOneLift.Start(LIFTERS[i]);
                 }
             }
             else
             {
                 Dispatcher.Invoke(new Action(() =>
                 {
-                    MM.AddText("Data base open fail", MessageType.Error);
+                    MM.AddText("thers is no retrive lifter exist", MessageType.Exception);
                 }));
             }
         }
@@ -141,6 +155,82 @@ namespace AgvDispatchor
             
             
         }
-        
+
+        private void AllCarrierAction()
+        {
+            while (CARRIER_CIRCLE)
+            {
+                Dispatcher.Invoke(new Action(() =>
+                {
+                    lvCarriers.Items.Clear();
+                }));
+                CARRIES = DB.GetAllCarriers();
+                if (CARRIES != null && CARRIES.Count > 0)
+                {
+                    for (int i = 0; i < CARRIES.Count; i++)
+                    {
+                        Dispatcher.Invoke(new Action(() =>
+                        {
+                            ListViewItem item = new ListViewItem();
+                            item.Content = CARRIES[i];
+                            lvCarriers.Items.Add(item);
+                        }));
+                        CARRIES[i].Message = ShowCallbackMessage;
+                        Thread thOneCarrier = new Thread(CARRIES[i].CarrierAction);
+                        thOneCarrier.Start(CARRIES[i]);
+                    }
+                    RefreshMaterialsOnCarrier();
+                }
+                else
+                {
+                    ShowCallbackMessage("thers is no Carriers exist", MessageType.Exception);
+                }
+                Thread.Sleep(SLEEP_TIME);
+            }
+        }
+
+        private void RefreshMaterialsOnCarrier()
+        {
+            Dispatcher.Invoke(new Action(() =>{ labSelectCarrierCode.Content = "Carrier Code: " + SELECT_CARRIER_CODE; }));
+            for (int i = 1; i < 37; i++)
+            {
+                Dispatcher.Invoke(new Action(() => 
+                {
+                    Label lab = FindName("labIndex" + i) as Label;
+                    if (lab != null)
+                    {
+                        lab.Background = Brushes.White;
+                        lab.Content = "Empty";
+                    }
+                }));
+            }
+            if (SELECT_CARRIER_CODE != null && SELECT_CARRIER_CODE != string.Empty)
+            {
+                List<Material> materials = DB.GetMaterialsByCarrierCode(SELECT_CARRIER_CODE);
+                for (int i = 0; i < materials.Count; i++)
+                {
+                    Dispatcher.Invoke(new Action(() => 
+                    {
+                        string index = materials[i].CarrierIndex;
+                        Label lab = FindName("labIndex" + index) as Label;
+                        if (lab != null)
+                        {
+                            lab.Background = Brushes.Lime;
+                            lab.Content = "Device :" + materials[i].TargetDeviceCode + " , Device Index: " + materials[i].TargetDeviceIndex;
+                        }
+                    }));
+                }
+            }
+        }
+
+        private void lvCarriers_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ListViewItem item = (ListViewItem)lvCarriers.SelectedValue;
+            if (item != null)
+            {
+                SELECT_CARRIER_CODE = ((Carrier)item.Content).Code;
+            }
+            RefreshMaterialsOnCarrier();
+        }
     }
 }

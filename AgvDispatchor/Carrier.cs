@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AgvDispatchor
@@ -9,13 +10,140 @@ namespace AgvDispatchor
     internal class Carrier
     {
         public Carrier()
-        { }
-
+        {
+        }
         public string Code { get; set; }
         public string Status { get; set; }
         public string Battery { get; set; }
         public string Robot_1 { get; set; }
         public string Robot_2 { get; set; }
+
+        private static float LOW_POWER = 15f;
+        private static float HIGH_POWER = 95f;
+        public delegate void SendMessage(string msg, MessageType mt);
+        public SendMessage Message;
+        public void CarrierAction(object carr)
+        {
+            Carrier carrier = carr as Carrier;
+            DbAccess Db = new DbAccess();
+            Db.Open();
+            if (carrier == null)
+            {
+                Message("Carrier: " + Code + " get informations error", MessageType.Error);
+            }
+            else
+            {
+                CarrierStatus st = (CarrierStatus)Convert.ToInt32(carrier.Status);
+                switch (st)
+                {
+                    case CarrierStatus.Retrieve:
+                    case CarrierStatus.Init:
+                    case CarrierStatus.Unloading:
+                    case CarrierStatus.Retrieving:
+                    case CarrierStatus.Initing:
+                    case CarrierStatus.Charge:
+                        break;
+                    case CarrierStatus.Full:
+                        List<Material> materials = Db.QueryMaterialByCarrierCode(Code);
+                        if (materials == null)
+                        {
+                            Message("Query materials on Carrier: " + Code + " error", MessageType.Error);
+                        }
+                        else if (materials.Count == 0)
+                        {
+                            Message("No materials on Carrier: " + Code, MessageType.Exception);
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
+                            {
+                                //HttpWebRequest
+                            }
+                            else
+                            {
+                                Message("Empty Carrier: " + Code + " set status to init fail", MessageType.Error);
+                            }
+                        }
+                        else
+                        {
+                            //HttpWebRequest
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Transport))
+                            {
+                            }
+                            else
+                            {
+                                Message("Empty Carrier: " + Code + " set status to Transport fail", MessageType.Error);
+                            }
+                        }
+                        break;
+                    case CarrierStatus.Transport:
+                        //HttpWebRequest
+                        if (true)
+                        {
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Unloading))
+                            {
+                            }
+                            else
+                            {
+                                Message("Empty Carrier: " + Code + " set status to Unloading fail", MessageType.Error);
+                            }
+                        }
+                        else
+                        {
+                        }
+                        break;
+                    case CarrierStatus.Idle:
+                        float battery;
+                        if (float.TryParse(carrier.Battery, out battery))
+                        {
+                            if (LOW_POWER >= battery)
+                            {
+                                //HttpWebRequest
+                                if (Db.SetCarrierStatus(Code, CarrierStatus.Charge))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Empty Carrier: " + Code + " set status to Charge fail", MessageType.Error);
+                                }
+                            }
+                            else
+                            {
+                            }
+                        }
+                        else
+                        {
+                            Message("Carrier: " + Code + " battery data error", MessageType.Error);
+                        }
+                        break;
+                    case CarrierStatus.Charging:
+                        float currbattery;
+                        if (float.TryParse(carrier.Battery, out currbattery))
+                        {
+                            if (HIGH_POWER <= currbattery)
+                            {
+                                //HttpWebRequest
+                                if (Db.SetCarrierStatus(Code, CarrierStatus.Idle))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Empty Carrier: " + Code + " set status to Idle fail", MessageType.Error);
+                                }
+                            }
+                            else
+                            {
+                            }
+                        }
+                        else
+                        {
+                            Message("Carrier: " + Code + " battery data error", MessageType.Error);
+                        }
+                        break;
+                    default:
+                        Message("Carrier: " + Code + " status data error", MessageType.Error);
+                        break;
+                }
+            }
+            Db.Close();
+        }
     }
 
     public enum CarrierStatus

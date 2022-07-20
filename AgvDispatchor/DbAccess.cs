@@ -11,7 +11,7 @@ namespace AgvDispatchor
     {
         public DbAccess()
         {
-            CONN = new SqlConnection("Data Source=192.168.1.159;Database=AGV;uid=sa;pwd=1q2w3e4r");
+            CONN = new SqlConnection("Data Source=127.0.0.1;Database=AGV;uid=sa;pwd=1q2w3e4r");
         }
 
         public bool Open()
@@ -75,6 +75,7 @@ namespace AgvDispatchor
                         material.TargetDeviceCode = reader["TargetDeviceCode"].ToString();
                         material.TargetDeviceIndex = reader["TargetDeviceIndex"].ToString();
                         material.RobotCode = reader["RobotCode"].ToString();
+                        list.Add(material);
                     }
                 }
             }
@@ -99,41 +100,6 @@ namespace AgvDispatchor
                 result = true;
             }
             return result;
-        }
-
-        public List<Material> QueryMaterialByCarrierCode(string code)
-        {
-            List<Material> list = new List<Material>();
-            string sql = "select * from Materials where CarrierCode = '" + code + "'";
-            SqlCommand com = new SqlCommand(sql, CONN);
-            SqlDataReader reader = com.ExecuteReader();
-            if (reader != null && reader.HasRows)
-            {
-                try
-                {
-                    while (reader.Read())
-                    {
-                        Material m = new Material();
-                        m.Code = reader["Code"].ToString();
-                        m.LifterCode = reader["LifterCode"].ToString();
-                        m.CarrierCode = reader["CarrierCode"].ToString();
-                        m.CarrierIndex = reader["CarrierIndex"].ToString();
-                        m.TargetDeviceCode = reader["TargetDeviceCode"].ToString();
-                        m.TargetDeviceIndex = reader["TargetDeviceIndex"].ToString();
-                        m.RobotCode = reader["RobotCode"].ToString();
-                        m.Status = reader["Status"].ToString();
-                        list.Add(m);
-                    }
-                }
-                catch (Exception)
-                {
-                    list = null;
-                }
-            }
-            reader.Close();
-            com.Dispose();
-
-            return list;
         }
 
         public List<Lifter> GetAllRetriveLiftersWithType(LifterType type)
@@ -167,24 +133,36 @@ namespace AgvDispatchor
             return lifters;
         }
 
-        public string ExistCarriersAtLifter(string liftCode)
+        public string GetFirstCarrierInLifterQueuebyCode(string liftCode, LifterType lt)
         {
-            string sql = "select count(*) from Lifters where Parking = 2 and Code = '" + liftCode + "'";
+            string carrierCode = string.Empty;
+            string sql;
+            if (lt == LifterType.Retrive)
+            {
+                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
+                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Retrieving;
+            }
+            else
+            {
+                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
+                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Initing;
+            }
+            
             if (CONN.State == System.Data.ConnectionState.Open)
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
                 object obj = com.ExecuteScalar();
-                string res = ( obj != null && obj.ToString() != string.Empty ) ? obj.ToString() : string.Empty;
+                carrierCode = obj != null ? obj.ToString() : null;
                 com.Dispose();
-                return res;
             }
             else
             {
-                return null;
+                carrierCode = null;
             }
+            return carrierCode;
         }
 
-        public bool SetLifterStatus(LifterStatus status, string code)
+        public bool SetRetriveLifterStatus(RetriveLifterStatus status, string code)
         {
             bool res = false;
             string sql = "update lifters set status = "+ (int)status + " where Code = '"+ code + "'";

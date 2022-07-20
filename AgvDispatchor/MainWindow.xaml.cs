@@ -39,7 +39,7 @@ namespace AgvDispatchor
         List<Lifter> LIFTERS;               //升降机列表
         List<Carrier> CARRIES;          //搬送车列表
 
-        bool CARRIER_CIRCLE;
+        bool CARRIER_CIRCLE, LIFTER_CIRCLE;
         string SELECT_CARRIER_CODE;
         int SLEEP_TIME;
 
@@ -48,7 +48,7 @@ namespace AgvDispatchor
             InitializeComponent();
             LIFTERS = new List<Lifter>();
             CARRIES = new List<Carrier>();
-            CARRIER_CIRCLE = true;
+            CARRIER_CIRCLE = LIFTER_CIRCLE = true;
             SLEEP_TIME = 5000;
         }
 
@@ -59,6 +59,7 @@ namespace AgvDispatchor
                 TH_LIFT.Abort();
             }
             CARRIER_CIRCLE = false;
+            LIFTER_CIRCLE = false;
             DB.Close();
         }
 
@@ -96,64 +97,45 @@ namespace AgvDispatchor
 
         private void LifterAction()
         {
-            LIFTERS = DB.GetAllRetriveLiftersWithType(LifterType.None);
-            if (LIFTERS.Count > 0)
-            {
-                for (int i = 0; i < LIFTERS.Count; i++)
-                {
-                    Thread thOneLift;
-                    if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
-                    {
-                        thOneLift = new Thread(OneRetriveLift);
-                    }
-                    else
-                    {
-                        thOneLift = new Thread(OneRetriveLift);
-                    }
-                    thOneLift.Start(LIFTERS[i]);
-                }
-            }
-            else
+            while (LIFTER_CIRCLE)
             {
                 Dispatcher.Invoke(new Action(() =>
                 {
-                    MM.AddText("thers is no retrive lifter exist", MessageType.Exception);
+                    lvLifters.Items.Clear();
                 }));
-            }
-        }
-
-        private void OneRetriveLift(object code)
-        {
-            Lifter lifter = code as Lifter;
-            while (true)
-            {
-                string strResult = DB.ExistCarriersAtLifter(lifter.Code);
-                if (strResult != null && strResult != string.Empty)
+                LIFTERS = DB.GetAllRetriveLiftersWithType(LifterType.None);
+                if (LIFTERS.Count > 0)
                 {
-                    if (lifter.Status == ((int)LifterStatus.Idle).ToString())
+                    for (int i = 0; i < LIFTERS.Count; i++)
                     {
-                        if (DB.SetLifterStatus(LifterStatus.Fall, lifter.Code))             //还要加上执行升降机下降操作的代码
+                        Dispatcher.Invoke(new Action(() =>
                         {
-
+                            ListViewItem item = new ListViewItem();
+                            item.Content = LIFTERS[i];
+                            lvLifters.Items.Add(item);
+                        }));
+                        LIFTERS[i].Message = ShowCallbackMessage;
+                        Thread thOneLift;
+                        if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
+                        {
+                            thOneLift = new Thread(LIFTERS[i].RetriveLifterAction);
                         }
                         else
                         {
-                            Dispatcher.Invoke(new Action(() =>{ MM.AddText(lifter.Code + " action fail at" + LifterStatus.Fall, MessageType.Error); }));
-                            Thread.Sleep(SLEEP_TIME);
+                            thOneLift = new Thread(LIFTERS[i].SupplyLifterAction);
                         }
+                        thOneLift.Start(LIFTERS[i]);
                     }
                 }
                 else
                 {
                     Dispatcher.Invoke(new Action(() =>
                     {
-                        MM.AddText("there is no carrier at lifter right now", MessageType.Default);
+                        MM.AddText("thers is no retrive lifter exist", MessageType.Exception);
                     }));
-                    Thread.Sleep(SLEEP_TIME);
                 }
+                Thread.Sleep(SLEEP_TIME);
             }
-            
-            
         }
 
         private void AllCarrierAction()
@@ -216,7 +198,7 @@ namespace AgvDispatchor
                         if (lab != null)
                         {
                             lab.Background = Brushes.Lime;
-                            lab.Content = "Device :" + materials[i].TargetDeviceCode + " , Device Index: " + materials[i].TargetDeviceIndex;
+                            lab.Content = "Device :" + materials[i].TargetDeviceCode + " , Index: " + materials[i].TargetDeviceIndex;
                         }
                     }));
                 }
@@ -231,6 +213,11 @@ namespace AgvDispatchor
                 SELECT_CARRIER_CODE = ((Carrier)item.Content).Code;
             }
             RefreshMaterialsOnCarrier();
+        }
+
+        private void lvLifters_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
         }
     }
 }

@@ -44,7 +44,7 @@ namespace AgvDispatchor
                     case CarrierStatus.Charge:
                         break;
                     case CarrierStatus.Full:
-                        List<Material> materials = Db.QueryMaterialByCarrierCode(Code);
+                        List<Material> materials = Db.GetMaterialsByCarrierCode(Code);
                         if (materials == null)
                         {
                             Message("Query materials on Carrier: " + Code + " error", MessageType.Error);
@@ -95,7 +95,7 @@ namespace AgvDispatchor
                         {
                             if (LOW_POWER >= battery)
                             {
-                                //HttpWebRequest
+                                //HttpWebRequest 去充电队列
                                 if (Db.SetCarrierStatus(Code, CarrierStatus.Charge))
                                 {
                                 }
@@ -106,6 +106,7 @@ namespace AgvDispatchor
                             }
                             else
                             {
+                                //HttpWebRequest 去空闲区
                             }
                         }
                         else

@@ -35,21 +35,34 @@ namespace AgvDispatchor
             List<Carrier> list = new List<Carrier>(0);
             string sql = "select * from Carriers";
             SqlCommand com = new SqlCommand(sql, CONN);
-            SqlDataReader reader = com.ExecuteReader();
-            if (reader != null && reader.HasRows)
+            SqlDataReader reader = null;
+            try
             {
-                while (reader.Read())
+                reader = com.ExecuteReader();
+                if (reader != null && reader.HasRows)
                 {
-                    Carrier carrier = new Carrier();
-                    carrier.Code = reader["Code"].ToString();
-                    carrier.Status = reader["Status"].ToString();
-                    carrier.Battery = reader["Battery"].ToString();
-                    carrier.Robot_1 = reader["Robot_1"].ToString();
-                    carrier.Robot_2 = reader["Robot_2"].ToString();
-                    list.Add(carrier);
+                    while (reader.Read())
+                    {
+                        Carrier carrier = new Carrier();
+                        carrier.Code = reader["Code"].ToString();
+                        carrier.Status = reader["Status"].ToString();
+                        carrier.Battery = reader["Battery"].ToString();
+                        carrier.Robot_1 = reader["Robot_1"].ToString();
+                        carrier.Robot_2 = reader["Robot_2"].ToString();
+                        list.Add(carrier);
+                    }
                 }
             }
-            reader.Close();
+            catch (Exception)
+            {
+                list = null;
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            
             com.Dispose();
             return list;
         }
@@ -59,9 +72,10 @@ namespace AgvDispatchor
             List<Material> list = new List<Material>();
             string sql = "select * from Materials where CarrierCode = '"+code+"' and Status = " + (int)MaterialStatus.Carrier;
             SqlCommand com = new SqlCommand(sql, CONN);
-            SqlDataReader reader = com.ExecuteReader();
+            SqlDataReader reader = null;
             try
             {
+                reader = com.ExecuteReader();
                 if (reader != null && reader.HasRows)
                 {
                     while (reader.Read())
@@ -83,7 +97,12 @@ namespace AgvDispatchor
             {
                 list = null;
             }
-            reader.Close();
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            
             com.Dispose();
             return list;
         }
@@ -102,10 +121,10 @@ namespace AgvDispatchor
             return result;
         }
 
-        public List<Lifter> GetAllRetriveLiftersWithType(LifterType type)
+        public List<Lifter> GetAllLiftersWithType(LifterType type)
         {
             List<Lifter> lifters = new List<Lifter>(0);
-            string sql = "select code from Lifters";
+            string sql = "select * from Lifters";
             if (type != LifterType.None)
             {
                 sql += " where Type = " + (int)type;
@@ -114,20 +133,33 @@ namespace AgvDispatchor
             if (CONN.State == System.Data.ConnectionState.Open)
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
-                SqlDataReader reader = com.ExecuteReader();
-                if (reader != null && reader.HasRows)
+                SqlDataReader reader = null;
+                try
                 {
-                    while (reader.Read())
+                    reader = com.ExecuteReader();
+                    if (reader != null && reader.HasRows)
                     {
-                        Lifter lifter = new Lifter();
-                        lifter.Code = reader["Code"].ToString();
-                        lifter.Type = reader["Type"].ToString();
-                        lifter.Status = reader["Status"].ToString();
-                        lifter.Parking = reader["Parking"].ToString();
-                        lifters.Add(lifter);
+                        while (reader.Read())
+                        {
+                            Lifter lifter = new Lifter();
+                            lifter.Code = reader["Code"].ToString();
+                            lifter.Type = reader["Type"].ToString();
+                            lifter.Status = reader["Status"].ToString();
+                            lifter.Parking = reader["Parking"].ToString();
+                            lifters.Add(lifter);
+                        }
                     }
                 }
-                reader.Close();
+                catch (Exception)
+                {
+                    lifters = null;
+                }
+                finally
+                {
+                    if (reader != null)
+                        reader.Close();
+                }
+                
                 com.Dispose();
             }
             return lifters;
@@ -176,6 +208,36 @@ namespace AgvDispatchor
             return res;
         }
 
+        public bool SetSupplyLifterStatus(SupplyLifterStatus status, string code)
+        {
+            bool res = false;
+            string sql = "update lifters set status = " + (int)status + " where Code = '" + code + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public int ExistMaterialRequests()
+        {
+            int result = 0;
+            string sql = "select count(*) from Requests where RequestCode = 1";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object count = com.ExecuteScalar();
+                if (count != null)
+                {
+                    result = Convert.ToInt32(count);
+                }
+                com.Dispose();
+            }
+            return result;
+        }
 
         private SqlConnection CONN;
     }

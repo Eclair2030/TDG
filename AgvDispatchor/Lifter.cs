@@ -99,9 +99,15 @@ namespace AgvDispatchor
                                 }
                                 else
                                 {
-                                    //让搬送车离开
                                     carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
-                                    db.SetCarrierStatus(carrierCode, CarrierStatus.Idle);
+                                    if (carrierCode != null && carrierCode != string.Empty)
+                                    {
+                                        db.SetCarrierStatus(carrierCode, CarrierStatus.Idle);
+                                    }
+                                    else
+                                    {
+                                        Message("Retrive lifter: " + lifter.Code + " get carrier code fail at avoid position", MessageType.Error);
+                                    }
                                 }
                                 break;
                             case RetriveLifterStatus.Leave:
@@ -211,8 +217,189 @@ namespace AgvDispatchor
             Lifter lifter = obj as Lifter;
             if (lifter != null && lifter.Type == ((int)LifterType.Supply).ToString())
             {
-
-            }
+                try
+                {
+                    SupplyLifterStatus status = (SupplyLifterStatus)Convert.ToInt32(lifter.Status);
+                    DbAccess db = new DbAccess();
+                    string carrierCode = string.Empty;
+                    if (db.Open())
+                    {
+                        switch (status)
+                        {
+                            case SupplyLifterStatus.Loading:
+                                if (true)   //电机判断是否已到达接料位
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Load, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Load fail", MessageType.Error);
+                                    }
+                                }
+                                else
+                                {
+                                    //电机去接料位
+                                }
+                                break;
+                            case SupplyLifterStatus.Load:
+                                if (db.ExistMaterialRequests() > 0)
+                                {
+                                    //向仓库供料系统发出请求
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Wait, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Wait fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Wait:
+                                if (true)   //收到仓库供料系统的响应
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Response, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Response fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Response:
+                                //转动链条
+                                //更改物料请求表
+                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.ChainRoll, lifter.Code))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " set status to ChainRoll fail", MessageType.Error);
+                                }
+                                break;
+                            case SupplyLifterStatus.ChainRoll:
+                                if (true)   //用Sensor判断料车已经到达升降机
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Pullin, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Pullin fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Pullin:
+                                //电机去避让位
+                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoiding, lifter.Code))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " set status to Avoiding fail", MessageType.Error);
+                                }
+                                break;
+                            case SupplyLifterStatus.Avoiding:
+                                if (true)   //电机判断是否到达避让位
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoid, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Avoid fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Avoid:
+                                carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
+                                if (carrierCode == null && carrierCode != string.Empty)
+                                {
+                                    if (true)   //用Sensor判断搬送车是否已经到位
+                                    {
+                                        if (db.SetSupplyLifterStatus(SupplyLifterStatus.Arrive, lifter.Code))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Supply lifter: " + lifter.Code + " set status to Arrive fail", MessageType.Error);
+                                        }
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Arrive:
+                                //升降机去下料位
+                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unloading, lifter.Code))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " set status to Unloading fail", MessageType.Error);
+                                }
+                                break;
+                            case SupplyLifterStatus.Unloading:
+                                if (true)   //电机判断是否到达下料位
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unload, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Unload fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Unload:
+                                if (true)   //用Sensor判断搬送车是否已离开
+                                {
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Leave, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Leave fail", MessageType.Error);
+                                    }
+                                }
+                                else
+                                {
+                                    carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
+                                    if (carrierCode != null && carrierCode != string.Empty)
+                                    {
+                                        db.SetCarrierStatus(carrierCode, CarrierStatus.Full);
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " get carrier code fail at unload position", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            case SupplyLifterStatus.Leave:
+                                //电机去接料位
+                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifter.Code))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
+                                }
+                                break;
+                            default:
+                                Message("Supply lifter: " + lifter.Code + " set status error", MessageType.Error);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        Message("Supply lifter: " + lifter.Code + " database access error", MessageType.Error);
+                    }
+                    db.Close();
+                }
+                catch (Exception)
+                {
+                    Message("Supply lifter: " + lifter.Code + " action fail", MessageType.Error);
+                }
+             }
             else
             {
                 Message("Supply lifter data or type error", MessageType.Error);

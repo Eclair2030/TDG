@@ -28,7 +28,7 @@
             </ListView.View>
         </ListView>
         <Label Content="Robots" HorizontalAlignment="Left" Margin="410,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
-        <ListView d:ItemsSource="{d:SampleData ItemCount=5}" Margin="410,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ListView x:Name="lvRobots" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="410,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
@@ -100,12 +100,12 @@
         <Label Content="Buffer 3" HorizontalAlignment="Left" Margin="570,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label Content="Buffer 4" HorizontalAlignment="Left" Margin="650,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label Content="Arm" HorizontalAlignment="Left" Margin="730,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Lifter Code:" HorizontalAlignment="Left" Margin="930,410,0,0" VerticalAlignment="Top" Width="290" FontSize="16"/>
-        <ListView d:ItemsSource="{d:SampleData ItemCount=5}" Margin="930,445,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Label x:Name="labSelectLifterCode" Content="Lifter Code:" HorizontalAlignment="Left" Margin="930,410,0,0" VerticalAlignment="Top" Width="290" FontSize="16"/>
+        <ListView x:Name="lvLifterQueue" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="930,445,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Index" Width="70" DisplayMemberBinding="{Binding Code}"/>
-                    <GridViewColumn Header="Carrier Code" Width="100" DisplayMemberBinding="{Binding Type}"/>
+                    <GridViewColumn Header="Number" Width="100" DisplayMemberBinding="{Binding Number}"/>
+                    <GridViewColumn Header="Carrier Code" Width="100" DisplayMemberBinding="{Binding CarrierCode}"/>
                 </GridView>
             </ListView.View>
         </ListView>

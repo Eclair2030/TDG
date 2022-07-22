@@ -103,6 +103,7 @@ namespace AgvDispatchor
                                     if (carrierCode != null && carrierCode != string.Empty)
                                     {
                                         db.SetCarrierStatus(carrierCode, CarrierStatus.Idle);
+                                        db.LifterQueueDeleteZero(lifter.Code);
                                     }
                                     else
                                     {
@@ -243,16 +244,13 @@ namespace AgvDispatchor
                                 }
                                 break;
                             case SupplyLifterStatus.Load:
-                                if (db.ExistMaterialRequests() > 0)
+                                //向仓库供料系统发出请求
+                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Wait, lifter.Code))
                                 {
-                                    //向仓库供料系统发出请求
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Wait, lifter.Code))
-                                    {
-                                    }
-                                    else
-                                    {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Wait fail", MessageType.Error);
-                                    }
+                                }
+                                else
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " set status to Wait fail", MessageType.Error);
                                 }
                                 break;
                             case SupplyLifterStatus.Wait:
@@ -367,6 +365,7 @@ namespace AgvDispatchor
                                     if (carrierCode != null && carrierCode != string.Empty)
                                     {
                                         db.SetCarrierStatus(carrierCode, CarrierStatus.Full);
+                                        db.LifterQueueDeleteZero(lifter.Code);
                                     }
                                     else
                                     {

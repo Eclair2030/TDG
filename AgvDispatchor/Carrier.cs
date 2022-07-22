@@ -41,6 +41,7 @@ namespace AgvDispatchor
                     case CarrierStatus.Unloading:
                     case CarrierStatus.Retrieving:
                     case CarrierStatus.Initing:
+                    case CarrierStatus.Ready:
                     case CarrierStatus.Charge:
                         break;
                     case CarrierStatus.Full:
@@ -89,6 +90,9 @@ namespace AgvDispatchor
                         {
                         }
                         break;
+                    case CarrierStatus.Complete:
+                        //HttpWebRequest去往卸料等待区
+                        break;
                     case CarrierStatus.Idle:
                         float battery;
                         if (float.TryParse(carrier.Battery, out battery))
@@ -101,12 +105,19 @@ namespace AgvDispatchor
                                 }
                                 else
                                 {
-                                    Message("Empty Carrier: " + Code + " set status to Charge fail", MessageType.Error);
+                                    Message("Carrier: " + Code + " set status to Charge fail", MessageType.Error);
                                 }
                             }
                             else
                             {
                                 //HttpWebRequest 去空闲区
+                                if (Db.SetCarrierStatus(Code, CarrierStatus.Ready))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Carrier: " + Code + " set status to Ready fail", MessageType.Error);
+                                }
                             }
                         }
                         else
@@ -153,11 +164,13 @@ namespace AgvDispatchor
         Init = 1,                            //在来料升降机队列中，由队列控制模块置位到其他状态
         Full = 2,                           //从升降机接到满料
         Transport = 3,                //去设备上料途中
-        Unloading = 4,              //在达目标设备位置，由作业车置位到其他状态
-        Retrieving = 5,             //在回收升降机位置，由升降机置位到其他状态
-        Initing = 6,                    //在出料升降机位置，由升降机置位到其他状态
-        Idle = 7,                           //空闲
-        Charge = 8,                     //在充电队列中，由队列控制模块置位到其他状态
-        Charging = 9,                   //正在充电
+        Complete = 4,               //上料完成，由回收升降机队列置位到Retrive状态
+        Unloading = 5,              //在达目标设备位置，由作业车置位到其他状态
+        Retrieving = 6,             //在回收升降机位置，由升降机置位到其他状态
+        Initing = 7,                    //在出料升降机位置，由升降机置位到其他状态
+        Idle = 8,                           //空闲，由充电队列模块置位到Ready或者Charge状态
+        Ready = 9,                      //就绪状态，可以被来料升降机队列调用，由来料升降机队列置位到Init状态
+        Charge = 10,                  //在充电队列中，由队列控制模块置位到其他状态
+        Charging = 11,              //正在充电
     }
 }

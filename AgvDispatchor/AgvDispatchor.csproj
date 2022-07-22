@@ -68,11 +68,13 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Battery.cs" />
+    <Compile Include="CarrierInLifterQueue.cs" />
     <Compile Include="DbAccess.cs" />
     <Compile Include="Lifter.cs" />
     <Compile Include="Material.cs" />
     <Compile Include="MessageManager.cs" />
     <Compile Include="Robot.cs" />
+    <Compile Include="StoreIO.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

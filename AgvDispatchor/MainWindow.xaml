@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="TDG - MT AGV Dispatchor" Height="1035" Width="1821" Closing="Window_Closing" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     <Grid>
-        <ScrollViewer x:Name="slView" Margin="1230,110,0,0" Width="500" HorizontalAlignment="Left" VerticalAlignment="Top" Height="410">
+        <ScrollViewer x:Name="slView" Margin="1037,111,0,0" Width="500" HorizontalAlignment="Left" VerticalAlignment="Top" Height="410">
             <TextBlock x:Name="tbMessage" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="2015" Width="482" Background="#FFEFEFEF" FontSize="16"/>
         </ScrollViewer>
         <wv2:WebView2 x:Name="edge" HorizontalAlignment="Left" Height="108" Margin="1733,894,0,0" VerticalAlignment="Top" Width="71"/>
@@ -28,21 +28,24 @@
             </ListView.View>
         </ListView>
         <Label Content="Robots" HorizontalAlignment="Left" Margin="410,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
-        <ListView x:Name="lvRobots" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="410,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ListView x:Name="lvRobots" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="410,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvRobots_SelectionChanged">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
-                    <GridViewColumn Header="Status" Width="70" DisplayMemberBinding="{Binding Status}"/>
-                    <GridViewColumn Header="Battery" Width="70" DisplayMemberBinding="{Binding Battery}"/>
-                    <GridViewColumn Header="Coordi" Width="70" DisplayMemberBinding="{Binding Coordination}"/>
-                    <GridViewColumn Header="Process" Width="70" DisplayMemberBinding="{Binding Process}"/>
-                    <GridViewColumn Header="Dev Index" Width="70" DisplayMemberBinding="{Binding DeviceIndex}"/>
-                    <GridViewColumn Header="Car Index" Width="70" DisplayMemberBinding="{Binding CarrierIndex}"/>
+                    <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
+                    <GridViewColumn Header="Status" Width="60" DisplayMemberBinding="{Binding Status}"/>
+                    <GridViewColumn Header="Battery" Width="60" DisplayMemberBinding="{Binding Battery}"/>
+                    <GridViewColumn Header="Coordi" Width="60" DisplayMemberBinding="{Binding Coordination}"/>
+                    <GridViewColumn Header="Process" Width="60" DisplayMemberBinding="{Binding Process}"/>
+                    <GridViewColumn Header="DevIndex" Width="60" DisplayMemberBinding="{Binding DeviceIndex}"/>
+                    <GridViewColumn Header="CarIndex" Width="60" DisplayMemberBinding="{Binding CarrierIndex}"/>
+                    <GridViewColumn Header="Buffer1" Width="60" DisplayMemberBinding="{Binding Buffer1}"/>
+                    <GridViewColumn Header="Buffer2" Width="60" DisplayMemberBinding="{Binding Buffer2}"/>
+                    <GridViewColumn Header="Arm" Width="60" DisplayMemberBinding="{Binding Arm}"/>
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Lifters" HorizontalAlignment="Left" Margin="930,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
-        <ListView x:Name="lvLifters" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="930,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvLifters_SelectionChanged">
+        <Label Content="Lifters" HorizontalAlignment="Left" Margin="413,420,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
+        <ListView x:Name="lvLifters" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="413,460,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvLifters_SelectionChanged">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
@@ -94,14 +97,9 @@
         <Label x:Name="labIndex34" Content="1 - 20" HorizontalAlignment="Left" Margin="180,895,0,0" VerticalAlignment="Top" Width="140" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex35" Content="1 - 22" HorizontalAlignment="Left" Margin="180,925,0,0" VerticalAlignment="Top" Width="140" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex36" Content="1 - 20" HorizontalAlignment="Left" Margin="180,955,0,0" VerticalAlignment="Top" Width="140" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Robot Code:" HorizontalAlignment="Left" Margin="412,410,0,0" VerticalAlignment="Top" Width="497" FontSize="16"/>
-        <Label Content="Buffer 1" HorizontalAlignment="Left" Margin="410,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Buffer 2" HorizontalAlignment="Left" Margin="490,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Buffer 3" HorizontalAlignment="Left" Margin="570,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Buffer 4" HorizontalAlignment="Left" Margin="650,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label Content="Arm" HorizontalAlignment="Left" Margin="730,445,0,0" VerticalAlignment="Top" Width="69" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label x:Name="labSelectLifterCode" Content="Lifter Code:" HorizontalAlignment="Left" Margin="930,410,0,0" VerticalAlignment="Top" Width="290" FontSize="16"/>
-        <ListView x:Name="lvLifterQueue" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="930,445,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Label x:Name="labSelectRobotCode" Content="Robot Code:" HorizontalAlignment="Left" Margin="1038,535,0,0" VerticalAlignment="Top" Width="497" FontSize="16"/>
+        <Label x:Name="labSelectLifterCode" Content="Lifter Code:" HorizontalAlignment="Left" Margin="736,431,0,0" VerticalAlignment="Top" Width="206" FontSize="16"/>
+        <ListView x:Name="lvLifterQueue" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="734,461,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Number" Width="100" DisplayMemberBinding="{Binding Number}"/>

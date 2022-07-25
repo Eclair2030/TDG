@@ -18,6 +18,9 @@ namespace AgvDispatchor
         public string Process { get; set; }
         public string DeviceIndex { get; set; }
         public string CarrierIndex { get; set; }
+        public string Buffer1 { get; set; }
+        public string Buffer2 { get; set; }
+        public string Arm { get; set; }
     }
 
     public enum RobotStatus

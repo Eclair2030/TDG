@@ -44,7 +44,7 @@ namespace AgvDispatchor
         List<Carrier> CARRIES;          //搬送车列表
 
         bool CARRIER_CIRCLE, ROBOT_CIRCLE, LIFTER_CIRCLE, REQUEST_CIRCLE, QUEUE_CIRCLE;
-        string SELECT_CARRIER_CODE, SELECT_LIFTER_CODE;
+        string SELECT_CARRIER_CODE, SELECT_ROBOT_CODE, SELECT_LIFTER_CODE;
         int SLEEP_TIME;
 
         public MainWindow()
@@ -218,6 +218,24 @@ namespace AgvDispatchor
                         {
                             lvRobots.Items.Clear();
                         }));
+                        List<Robot> robots = DB.GetAllRobots();
+                        if (robots != null)
+                        {
+                            for (int i = 0; i < robots.Count; i++)
+                            {
+                                Dispatcher.Invoke(new Action(() =>
+                                {
+                                    ListViewItem item = new ListViewItem();
+                                    item.Content = robots[i];
+                                    lvRobots.Items.Add(item);
+                                }));
+                            }
+                            RefreshRobotDetails();
+                        }
+                        else
+                        {
+                            ShowCallbackMessage("thers is no Robots exist", MessageType.Exception);
+                        }
                     }
                     catch (Exception)
                     {
@@ -519,6 +537,30 @@ namespace AgvDispatchor
 
         }
 
+        private void RefreshRobotDetails()
+        {
+            DbAccess DB = new DbAccess();
+            if (DB.Open())
+            {
+                try
+                {
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        labSelectRobotCode.Content = "Robot Code:" + SELECT_ROBOT_CODE;
+                    }));
+                }
+                catch (Exception)
+                {
+                }
+            }
+            else
+            {
+                ShowCallbackMessage("Refresh Robot: " + SELECT_ROBOT_CODE + " queue data base open fail", MessageType.Error);
+            }
+            DB.Close();
+
+        }
+
         private void lvCarriers_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ListViewItem item = (ListViewItem)lvCarriers.SelectedValue;
@@ -537,6 +579,16 @@ namespace AgvDispatchor
                 SELECT_LIFTER_CODE = ((Lifter)item.Content).Code;
             }
             RefreshLifterQueues();
+        }
+
+        private void lvRobots_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ListViewItem item = (ListViewItem)lvRobots.SelectedValue;
+            if (item != null)
+            {
+                SELECT_ROBOT_CODE = ((Robot)item.Content).Code;
+            }
+            RefreshRobotDetails();
         }
     }
 }

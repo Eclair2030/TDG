@@ -29,7 +29,7 @@ namespace AgvDispatchor
         {
             CONN.Close();
         }
-
+        #region Carriers
         public List<Carrier> GetAllCarriers()
         {
             List<Carrier> list = new List<Carrier>(0);
@@ -157,7 +157,8 @@ namespace AgvDispatchor
             }
             return result;
         }
-
+        #endregion
+        #region Lifters
         public List<Lifter> GetAllLiftersWithType(LifterType type)
         {
             List<Lifter> lifters = new List<Lifter>(0);
@@ -297,23 +298,6 @@ namespace AgvDispatchor
             return res;
         }
 
-        public int ExistMaterialRequests()
-        {
-            int result = 0;
-            string sql = "select count(*) from Requests where RequestCode = 1";
-            if (CONN.State == System.Data.ConnectionState.Open)
-            {
-                SqlCommand com = new SqlCommand(sql, CONN);
-                object count = com.ExecuteScalar();
-                if (count != null)
-                {
-                    result = Convert.ToInt32(count);
-                }
-                com.Dispose();
-            }
-            return result;
-        }
-
         public List<CarrierInLifterQueue> GetLifterQueue(string lifterCode)
         {
             List<CarrierInLifterQueue> queue = new List<CarrierInLifterQueue>();
@@ -346,62 +330,6 @@ namespace AgvDispatchor
             }
             com.Dispose();
             return queue;
-        }
-
-        public int GetShortestLifterQueue(LifterType lt, out string lifterCode)
-        {
-            int result = 0;
-            lifterCode = string.Empty;
-            string sql = "select top 1 q.Code, count(*) as num from LifterQueue q inner join Lifters l on l.Code = q.Code and l.Type = " + (int)lt + " group by q.Code order by count(*) asc";
-            SqlCommand com = new SqlCommand(sql, CONN);
-            SqlDataReader reader = null;
-            try
-            {
-                reader = com.ExecuteReader();
-                if (reader != null && reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        lifterCode = reader["Code"].ToString();
-                        result = Convert.ToInt32(reader["num"]);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                result = -1;
-                lifterCode = null;
-            }
-            finally
-            {
-                if (reader != null)
-                    reader.Close();
-            }
-            com.Dispose();
-            return result;
-        }
-
-        public bool AddCarrierToShortestQueue(LifterType lt, string carrierCode)
-        {
-            bool result = false;
-            try
-            {
-                string sql = "insert into LifterQueue(Code, Number, CarrierCode) values(" + 
-                    "(select top 1 q.Code from LifterQueue q inner join Lifters l on l.Code = q.Code and l.Type = "+(int)lt+" group by q.Code having count(*) > 0 order by count(*) asc), " +
-                    "(select top 1 count(*) from LifterQueue q inner join Lifters l on l.Code = q.Code and l.Type = " + (int)lt + " group by q.Code order by count(*) asc)," +
-                    "'" + carrierCode + "')";
-                if (CONN.State == System.Data.ConnectionState.Open)
-                {
-                    SqlCommand com = new SqlCommand(sql, CONN);
-                    com.ExecuteNonQuery();
-                    com.Dispose();
-                    result = true;
-                }
-            }
-            catch (Exception)
-            {
-            }
-            return result;
         }
 
         public bool LifterQueueDeleteZero(string lifterCode)
@@ -453,24 +381,18 @@ namespace AgvDispatchor
             return result;
         }
 
-        public bool AddCarrierToLifterQueue(string lifterCode, string carrierCode)
+        public bool AddCarrierToShortestQueue(LifterType lt, string carrierCode)
         {
             bool result = false;
-            string sql = "select max(Number) from LifterQueue where Code = '" + lifterCode + "'";
             try
             {
+                string sql = "insert into LifterQueue(Code, Number, CarrierCode) values(" +
+                    "(select top 1 q.Code from LifterQueue q inner join Lifters l on l.Code = q.Code and l.Type = " + (int)lt + " group by q.Code having count(*) > 0 order by count(*) asc), " +
+                    "(select top 1 count(*) from LifterQueue q inner join Lifters l on l.Code = q.Code and l.Type = " + (int)lt + " group by q.Code order by count(*) asc)," +
+                    "'" + carrierCode + "')";
                 if (CONN.State == System.Data.ConnectionState.Open)
                 {
                     SqlCommand com = new SqlCommand(sql, CONN);
-                    object num = com.ExecuteScalar();
-                    com.Dispose();
-                    int number = 0;
-                    if (num != null && int.TryParse(num.ToString(), out number))
-                    {
-                        number++;
-                    }
-                    sql = "insert into LifterQueue(Code, Number, CarrierCode) values('" + lifterCode + "', " + number + ", '" + carrierCode + "')";
-                    com = new SqlCommand(sql, CONN);
                     com.ExecuteNonQuery();
                     com.Dispose();
                     result = true;
@@ -481,6 +403,39 @@ namespace AgvDispatchor
             }
             return result;
         }
+        #endregion
+        #region Request
+        public int ExistMaterialRequests()
+        {
+            int result = 0;
+            string sql = "select count(*) from Requests where RequestCode = 1";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object count = com.ExecuteScalar();
+                if (count != null)
+                {
+                    result = Convert.ToInt32(count);
+                }
+                com.Dispose();
+            }
+            return result;
+        }
+
+        public bool SetRequestOnByDeviceID(string deviceID)
+        {
+            bool res = false;
+            string sql = "update Requests set RequestCode = " + (int)RequestCodeType.Oncall + " where DeviceCode = '" + deviceID + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+        #endregion
 
         public List<Robot> GetAllRobots()
         {
@@ -503,6 +458,9 @@ namespace AgvDispatchor
                         robot.Process = reader["Process"].ToString();
                         robot.DeviceIndex = reader["DeviceIndex"].ToString();
                         robot.CarrierIndex = reader["CarrierIndex"].ToString();
+                        robot.Buffer1 = reader["Buffer1"].ToString();
+                        robot.Buffer2 = reader["Buffer2"].ToString();
+                        robot.Arm = reader["Arm"].ToString();
                         list.Add(robot);
                     }
                 }

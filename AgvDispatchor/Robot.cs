@@ -21,6 +21,9 @@ namespace AgvDispatchor
         public string Buffer1 { get; set; }
         public string Buffer2 { get; set; }
         public string Arm { get; set; }
+
+        public static float LOW_POWER = 15f;
+        public static float HIGH_POWER = 95f;
     }
 
     public enum RobotStatus
@@ -36,8 +39,9 @@ namespace AgvDispatchor
         SnapBuffer = 8,                     //相机对作业车的Buffer拍照
         PushBuffer = 9,                   //机械手把当前抓取的料放入Buffer
         PopBuffer = 10,                 //机械手抓取Buffer上的料
-        Idle = 11,                          //空闲
-        Charge = 12,                    //在充电队列中
-        Charging = 13,                  //正在充电
+        Idle = 11,                          //空闲，由充电队列模块置位到Standby或者Charge状态
+        Standby = 12,                      //就绪，可以应答上料请求
+        Charge = 13,                    //在充电队列中
+        Charging = 14,                  //正在充电
     }
 }

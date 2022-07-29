@@ -69,6 +69,7 @@
     </ApplicationDefinition>
     <Compile Include="Battery.cs" />
     <Compile Include="CarrierInLifterQueue.cs" />
+    <Compile Include="ChargeQueue.cs" />
     <Compile Include="DbAccess.cs" />
     <Compile Include="Lifter.cs" />
     <Compile Include="Material.cs" />

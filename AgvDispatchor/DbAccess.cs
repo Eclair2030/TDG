@@ -157,6 +157,35 @@ namespace AgvDispatchor
             }
             return result;
         }
+
+        public string GetFirstCarrierInLifterQueuebyCode(string liftCode, LifterType lt)
+        {
+            string carrierCode = string.Empty;
+            string sql;
+            if (lt == LifterType.Retrive)
+            {
+                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
+                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Retrieving;
+            }
+            else
+            {
+                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
+                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Initing;
+            }
+
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object obj = com.ExecuteScalar();
+                carrierCode = obj != null ? obj.ToString() : null;
+                com.Dispose();
+            }
+            else
+            {
+                carrierCode = null;
+            }
+            return carrierCode;
+        }
         #endregion
         #region Lifters
         public List<Lifter> GetAllLiftersWithType(LifterType type)
@@ -239,35 +268,6 @@ namespace AgvDispatchor
                 com.Dispose();
             }
             return lifters;
-        }
-
-        public string GetFirstCarrierInLifterQueuebyCode(string liftCode, LifterType lt)
-        {
-            string carrierCode = string.Empty;
-            string sql;
-            if (lt == LifterType.Retrive)
-            {
-                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
-                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Retrieving;
-            }
-            else
-            {
-                sql = "select l.CarrierCode from LifterQueue l inner join Carriers c on l.Number = 0 and l.Code = '" +
-                    liftCode + "' and c.Code = l.CarrierCode and c.Status = " + (int)CarrierStatus.Initing;
-            }
-            
-            if (CONN.State == System.Data.ConnectionState.Open)
-            {
-                SqlCommand com = new SqlCommand(sql, CONN);
-                object obj = com.ExecuteScalar();
-                carrierCode = obj != null ? obj.ToString() : null;
-                com.Dispose();
-            }
-            else
-            {
-                carrierCode = null;
-            }
-            return carrierCode;
         }
 
         public bool SetRetriveLifterStatus(RetriveLifterStatus status, string code)
@@ -435,8 +435,41 @@ namespace AgvDispatchor
             }
             return res;
         }
-        #endregion
 
+        public bool MakeResponse()
+        {
+            bool res = false;
+            string sql = "update Requests set RequestCode = " + (int)RequestCodeType.Transporting +
+                " where DeviceCode = (select MIN(DeviceCode) from Requests) " + 
+                "and DeviceIndex = (select MIN(DeviceIndex) from Requests)";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool InitDevicebyDeviceID(string deviceID)
+        {
+            bool res = false;
+            for (int i = 0; i < 800; i++)
+            {
+                string sql = "insert into Requests(DeviceCode, DeviceIndex, RequestCode) values('" + deviceID + "', " + ( i + 1) + ", " + (int)RequestCodeType.Oncall + ")";
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    com.ExecuteNonQuery();
+                    com.Dispose();
+                    res = true;
+                }
+            }
+            return res;
+        }
+        #endregion
+        #region Robots
         public List<Robot> GetAllRobots()
         {
             List<Robot> list = new List<Robot>(0);
@@ -477,7 +510,188 @@ namespace AgvDispatchor
             com.Dispose();
             return list;
         }
+        #endregion
+        #region Materials
+        public bool AssignMaterialsToLifter(string lifterCode, int index)
+        {
+            bool res = false;
+            string sql = "insert into Materials(Code,LifterCode,CarrierIndex,TargetDeviceCode,TargetDeviceIndex,Status) values(''," +
+                "'"+lifterCode+"'," + index + "," +
+                "(select top 1 DeviceCode from Requests where RequestCode = " + (int)RequestCodeType.Oncall + " order by DeviceCode, DeviceIndex asc)," +
+                "(select top 1 DeviceIndex from Requests where RequestCode = " + (int)RequestCodeType.Oncall + " order by DeviceCode, DeviceIndex asc)," +
+                (int)MaterialStatus.Lifter +")";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
 
+        public bool AssignMaterialsToCarrier(string lifterCode, string carrierCode)
+        {
+            bool res = false;
+            string sql = "Update Materials set CarrierCode = '"+ carrierCode + 
+                "',Status = " + (int)MaterialStatus.Carrier + " where LifterCode = '"+ lifterCode + "' and Status = " + (int)MaterialStatus.Lifter;
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+        #endregion
+        #region Charge
+        public List<Carrier> FindLowPowerCarriers()
+        {
+            string sql = "select * from Carriers where Battery < "+ (int)Carrier.LOW_POWER + " and Status = " + (int)CarrierStatus.Idle;
+            List<Carrier> list = new List<Carrier>(0);
+            SqlCommand com = new SqlCommand(sql, CONN);
+            SqlDataReader reader = null;
+            try
+            {
+                reader = com.ExecuteReader();
+                if (reader != null && reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        Carrier carrier = new Carrier();
+                        carrier.Code = reader["Code"].ToString();
+                        carrier.Status = reader["Status"].ToString();
+                        carrier.Battery = reader["Battery"].ToString();
+                        carrier.Robot_1 = reader["Robot_1"].ToString();
+                        carrier.Robot_2 = reader["Robot_2"].ToString();
+                        list.Add(carrier);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                list = null;
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            com.Dispose();
+            return list;
+        }
+
+        public List<Robot> FindLowPowerRobots()
+        {
+            string sql = "select * from Robots where Battery < " + (int)Robot.LOW_POWER + " and Status = " + (int)RobotStatus.Idle;
+            List<Robot> list = new List<Robot>(0);
+            SqlCommand com = new SqlCommand(sql, CONN);
+            SqlDataReader reader = null;
+            try
+            {
+                reader = com.ExecuteReader();
+                if (reader != null && reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        Robot robot = new Robot();
+                        robot.Code = reader["Code"].ToString();
+                        robot.Status = reader["Status"].ToString();
+                        robot.Battery = reader["Battery"].ToString();
+                        list.Add(robot);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                list = null;
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            com.Dispose();
+            return list;
+        }
+
+        public bool AddAGVToChargeQueue(string agvCode)
+        {
+            bool res = false;
+            string sql = "insert into BatteryQueue(Number, Code) values((select ISNULL(max(number),0) from BatteryQueue)+1, '" + agvCode + "')";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public List<ChargeQueue> GetChargeQueue()
+        {
+            string sql = "select * from Robots where Battery < " + (int)Robot.LOW_POWER + " and Status = " + (int)RobotStatus.Idle;
+            List<ChargeQueue> list = new List<ChargeQueue>(0);
+            SqlCommand com = new SqlCommand(sql, CONN);
+            SqlDataReader reader = null;
+            try
+            {
+                reader = com.ExecuteReader();
+                if (reader != null && reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        ChargeQueue queue = new ChargeQueue();
+                        queue.Number = reader["Number"].ToString();
+                        queue.Code = reader["Code"].ToString();
+                        list.Add(queue);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                list = null;
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            com.Dispose();
+            return list;
+        }
+
+        public bool ChargeQueueAutoCheck()
+        {
+            bool result = true;
+            try
+            {
+                string sql = "select top 1 Number from BatteryQueue where Number = 0";
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object agv = com.ExecuteScalar();
+                    com.Dispose();
+                    if (agv != null)
+                    {
+                    }
+                    else
+                    {
+                        sql = "update BatteryQueue set Number = Number - 1";
+                        com = new SqlCommand(sql, CONN);
+                        com.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                result = false;
+            }
+            return result;
+        }
+        #endregion
         private SqlConnection CONN;
     }
 }

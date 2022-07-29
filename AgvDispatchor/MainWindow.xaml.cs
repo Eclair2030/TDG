@@ -34,26 +34,29 @@ namespace AgvDispatchor
         Thread TH_ROBOT;                          //作业车控制线程
         Thread TH_QUEUE_SUPPLY;           //来料升降机队列控制线程
         Thread TH_QUEUE_RETRIVE;          //回收升降机队列控制线程
+        Thread TH_QUEUE_BATTERY;        //充电队列控制线程
         Thread TH_REQUEST;                      //物料请求线程
         Thread TH_ROLLBACK;                   //料车回收线程
         
-        MessageManager MM;
-        StoreIO IO;
+        MessageManager MM;                  //界面textblock文本显示类
+        StoreIO IO;                                         //升降机与仓库供料系统通讯对象
 
-        List<Lifter> LIFTERS;               //升降机列表
-        List<Carrier> CARRIES;          //搬送车列表
+        List<Lifter> LIFTERS;                       //升降机列表
+        List<Carrier> CARRIES;                  //搬送车列表
 
-        bool CARRIER_CIRCLE, ROBOT_CIRCLE, LIFTER_CIRCLE, REQUEST_CIRCLE, QUEUE_CIRCLE;
+        bool CARRIER_CIRCLE, ROBOT_CIRCLE, LIFTER_CIRCLE, REQUEST_CIRCLE, QUEUE_CIRCLE, BATTERY_CIRCLE;
         string SELECT_CARRIER_CODE, SELECT_ROBOT_CODE, SELECT_LIFTER_CODE;
         int SLEEP_TIME;
+        int SHELF_POSITIONS;                    //一个料车上的料总数
 
         public MainWindow()
         {
             InitializeComponent();
             LIFTERS = new List<Lifter>();
             CARRIES = new List<Carrier>();
-            CARRIER_CIRCLE = ROBOT_CIRCLE = LIFTER_CIRCLE = REQUEST_CIRCLE = QUEUE_CIRCLE = true;
+            CARRIER_CIRCLE = ROBOT_CIRCLE = LIFTER_CIRCLE = REQUEST_CIRCLE = QUEUE_CIRCLE = BATTERY_CIRCLE = true;
             SLEEP_TIME = 5000;
+            SHELF_POSITIONS = 36;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -67,6 +70,7 @@ namespace AgvDispatchor
             LIFTER_CIRCLE = false;
             REQUEST_CIRCLE = false;
             QUEUE_CIRCLE = false;
+            BATTERY_CIRCLE = false;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -83,6 +87,8 @@ namespace AgvDispatchor
             TH_CARRIER.Start();
             TH_ROBOT = new Thread(AllRobotAction);
             TH_ROBOT.Start();
+            TH_QUEUE_BATTERY = new Thread(ChargeQueueControl);
+            TH_QUEUE_BATTERY.Start();
             TH_REQUEST = new Thread(RequestJudge);
             TH_REQUEST.Start();
             TH_ROLLBACK = new Thread(ShelfRollback);
@@ -250,6 +256,56 @@ namespace AgvDispatchor
             DB.Close();
         }
 
+        private void ChargeQueueControl()
+        {
+            DbAccess DB = new DbAccess();
+            if (DB.Open())
+            {
+                while (BATTERY_CIRCLE)
+                {
+                    try
+                    {
+                        Dispatcher.Invoke(new Action(() =>
+                        {
+                        }));
+                        List<Carrier> carriers = DB.FindLowPowerCarriers();
+                        if (carriers != null)
+                        {
+                            for(int i = 0;i < carriers.Count;i++)
+                            {
+                                //Carrier去充电
+                                if (DB.AddAGVToChargeQueue(carriers[i].Code) && DB.SetCarrierStatus(carriers[i].Code, CarrierStatus.Charge))
+                                {
+                                    ShowCallbackMessage(carriers[i].Code + " add to charge queue", MessageType.Result);
+                                }
+                                else
+                                {
+                                    ShowCallbackMessage(carriers[i].Code + " add to charge queue fail", MessageType.Error);
+                                }
+                            }
+                        }
+                        if (DB.ChargeQueueAutoCheck())
+                        {
+                            
+                        }
+                        else
+                        {
+                            ShowCallbackMessage("charge queue auto forward fail", MessageType.Error);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    Thread.Sleep(SLEEP_TIME);
+                }
+            }
+            else
+            {
+                ShowCallbackMessage("charge queue control data base open fail", MessageType.Error);
+            }
+            DB.Close();
+        }
+
         private void RequestJudge()
         {
             DbAccess DB = new DbAccess();
@@ -286,6 +342,24 @@ namespace AgvDispatchor
                                             }
                                             if (code != string.Empty)
                                             {
+                                                for (int k = 0; k < SHELF_POSITIONS; k++)
+                                                {
+                                                    if (DB.AssignMaterialsToLifter(list[i].Code, k+1))
+                                                    {
+                                                        if (DB.MakeResponse())
+                                                        {
+                                                        }
+                                                        else
+                                                        {
+                                                            ShowCallbackMessage("Update request to make response fail", MessageType.Error);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        ShowCallbackMessage("Assign Materials to " + list[i].Code + " fail", MessageType.Error);
+                                                    }
+                                                }
+                                                
                                                 //排0号搬送车去往升降机
                                                 //到达升降机后 DB.SetCarrierStatus(code, CarrierStatus.Initing);
                                             }
@@ -589,6 +663,26 @@ namespace AgvDispatchor
                 SELECT_ROBOT_CODE = ((Robot)item.Content).Code;
             }
             RefreshRobotDetails();
+        }
+
+        private void btnTurn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (cbDevice.Text != null && cbDevice.Text != string.Empty)
+                {
+                    DbAccess DB = new DbAccess();
+                    if (DB.Open() && DB.SetRequestOnByDeviceID(cbDevice.Text))
+                    {
+                        MM.AddText("Device: "+ cbDevice.Text + " shelf turn arround complete, refresh requests", MessageType.Result);
+                    }
+                    DB.Close();
+                }
+            }
+            catch (Exception)
+            {
+                MM.AddText("Device: " + cbDevice.Text + " shelf turn arround unsuccessful", MessageType.Error);
+            }
         }
     }
 }

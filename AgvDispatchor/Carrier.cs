@@ -18,8 +18,8 @@ namespace AgvDispatchor
         public string Robot_1 { get; set; }
         public string Robot_2 { get; set; }
 
-        private static float LOW_POWER = 15f;
-        private static float HIGH_POWER = 95f;
+        public static float LOW_POWER = 15f;
+        public static float HIGH_POWER = 95f;
         public delegate void SendMessage(string msg, MessageType mt);
         public SendMessage Message;
         public void CarrierAction(object carr)
@@ -55,7 +55,7 @@ namespace AgvDispatchor
                             Message("No materials on Carrier: " + Code, MessageType.Exception);
                             if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
                             {
-                                //HttpWebRequest
+                                //HttpWebRequest 回去升降机上料
                             }
                             else
                             {
@@ -64,7 +64,7 @@ namespace AgvDispatchor
                         }
                         else
                         {
-                            //HttpWebRequest
+                            //HttpWebRequest 送料去设备
                             if (Db.SetCarrierStatus(Code, CarrierStatus.Transport))
                             {
                             }

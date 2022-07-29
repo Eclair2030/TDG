@@ -14,7 +14,17 @@
         <wv2:WebView2 x:Name="edge" HorizontalAlignment="Left" Height="108" Margin="1733,894,0,0" VerticalAlignment="Top" Width="71"/>
         <Button x:Name="btnStart" Content="Start" HorizontalAlignment="Left" Margin="31,10,0,0" VerticalAlignment="Top" Height="55" Width="140"/>
         <Button x:Name="btnStop" Content="Stop" HorizontalAlignment="Left" Margin="195,10,0,0" VerticalAlignment="Top" Height="55" Width="140"/>
-        <Button x:Name="btnTurn" Content="Turn" HorizontalAlignment="Left" Margin="355,10,0,0" VerticalAlignment="Top" Height="55" Width="140"/>
+        <ComboBox x:Name="cbDevice" HorizontalAlignment="Left" Margin="360,10,0,0" VerticalAlignment="Top" Width="138" Height="55" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20">
+            <ComboBoxItem Content="1" IsSelected="True"></ComboBoxItem>
+            <ComboBoxItem Content="2"></ComboBoxItem>
+            <ComboBoxItem Content="3"></ComboBoxItem>
+            <ComboBoxItem Content="4"></ComboBoxItem>
+            <ComboBoxItem Content="5"></ComboBoxItem>
+            <ComboBoxItem Content="6"></ComboBoxItem>
+            <ComboBoxItem Content="7"></ComboBoxItem>
+            <ComboBoxItem Content="8"></ComboBoxItem>
+        </ComboBox>
+        <Button x:Name="btnTurn" Content="Turn" HorizontalAlignment="Left" Margin="500,10,0,0" VerticalAlignment="Top" Height="55" Width="140" Click="btnTurn_Click"/>
         <Label Content="Carriers" HorizontalAlignment="Left" Margin="31,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
         <ListView x:Name="lvCarriers" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="30,110,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvCarriers_SelectionChanged">
             <ListView.View>
@@ -55,11 +65,11 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Batterys" HorizontalAlignment="Left" Margin="620,10,0,0" VerticalAlignment="Top" Width="100" FontSize="14" VerticalContentAlignment="Center"/>
-        <Rectangle HorizontalAlignment="Left" Height="20" Margin="580,45,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle HorizontalAlignment="Left" Height="20" Margin="620,45,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle HorizontalAlignment="Left" Height="20" Margin="660,45,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle HorizontalAlignment="Left" Height="20" Margin="700,45,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Label Content="Batterys" HorizontalAlignment="Left" Margin="919,12,0,0" VerticalAlignment="Top" Width="100" FontSize="14" VerticalContentAlignment="Center"/>
+        <Rectangle HorizontalAlignment="Left" Height="20" Margin="879,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle HorizontalAlignment="Left" Height="20" Margin="919,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle HorizontalAlignment="Left" Height="20" Margin="959,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle HorizontalAlignment="Left" Height="20" Margin="999,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
         <Label x:Name="labSelectCarrierCode" Content="Carrier Code:" HorizontalAlignment="Left" Margin="30,410,0,0" VerticalAlignment="Top" Width="359" FontSize="16"/>
         <Label x:Name="labIndex1" Content="1 - 24" HorizontalAlignment="Left" Margin="30,445,0,0" VerticalAlignment="Top" Width="140" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex2" Content="1 - 24" HorizontalAlignment="Left" Margin="30,475,0,0" VerticalAlignment="Top" Width="140" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
@@ -107,6 +117,7 @@
                 </GridView>
             </ListView.View>
         </ListView>
+        
 
 
     </Grid>

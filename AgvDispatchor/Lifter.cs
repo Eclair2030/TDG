@@ -6,22 +6,25 @@ using System.Threading.Tasks;
 
 namespace AgvDispatchor
 {
-    internal class Lifter
+    public class Lifter
     {
         public Lifter()
         { }
 
         public string Code { get; set; }
-        public string Type { get; set; }
-        public string Status { get; set; }
+        public int Type { get; set; }
+        public int Status { get; set; }
         public string Parking { get; set; } //弃用
+        public int QueuePosition { get; set; }
+        public int Position { get; set; }
 
         public delegate void SendMessage(string msg, MessageType mt);
         public SendMessage Message;
+
         public void RetriveLifterAction(object obj)
         {
             Lifter lifter = obj as Lifter;
-            if (lifter != null && lifter.Type == ((int)LifterType.Retrive).ToString())
+            if (lifter != null && lifter.Type == (int)LifterType.Retrive)
             {
                 try
                 {
@@ -138,29 +141,19 @@ namespace AgvDispatchor
                                 }
                                 break;
                             case RetriveLifterStatus.Unload:
-                                //向仓库供料系统发出下料请求
-                                if (db.SetRetriveLifterStatus(RetriveLifterStatus.Wait, lifter.Code))
+                                if (true)   //判断Buffer上是否不存在料车
                                 {
-                                }
-                                else
-                                {
-                                    Message("Retrive lifter: " + lifter.Code + " set status to Wait fail", MessageType.Error);
-                                }
-                                break;
-                            case RetriveLifterStatus.Wait:
-                                if (true)   //收到供料系统回应
-                                {
-                                    if (db.SetRetriveLifterStatus(RetriveLifterStatus.Response, lifter.Code))
+                                    if (db.SetRetriveLifterStatus(RetriveLifterStatus.Ready, lifter.Code))
                                     {
                                     }
                                     else
                                     {
-                                        Message("Retrive lifter: " + lifter.Code + " set status to Response fail", MessageType.Error);
+                                        Message("Retrive lifter: " + lifter.Code + " set status to Ready fail", MessageType.Error);
                                     }
                                 }
                                 break;
-                            case RetriveLifterStatus.Response:
-                                //转动链条，把料车送往仓库供料系统
+                            case RetriveLifterStatus.Ready:
+                                //转动链条，把料车送往Buffer
                                 if (db.SetRetriveLifterStatus(RetriveLifterStatus.ChainRoll, lifter.Code))
                                 {
                                 }
@@ -172,23 +165,13 @@ namespace AgvDispatchor
                             case RetriveLifterStatus.ChainRoll:
                                 if (true) //用Sensor判断料车已经离开升降机
                                 {
-                                    if (db.SetRetriveLifterStatus(RetriveLifterStatus.Pushout, lifter.Code))
+                                    if (db.SetRetriveLifterStatus(RetriveLifterStatus.Loading, lifter.Code))
                                     {
                                     }
                                     else
                                     {
-                                        Message("Retrive lifter: " + lifter.Code + " set status to Pushout fail", MessageType.Error);
+                                        Message("Retrive lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
                                     }
-                                }
-                                break;
-                            case RetriveLifterStatus.Pushout:
-                                //链条停止
-                                if (db.SetRetriveLifterStatus(RetriveLifterStatus.Loading, lifter.Code))
-                                {
-                                }
-                                else
-                                {
-                                    Message("Retrive lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
                                 }
                                 break;
                             default:
@@ -216,7 +199,7 @@ namespace AgvDispatchor
         public void SupplyLifterAction(object obj)
         {
             Lifter lifter = obj as Lifter;
-            if (lifter != null && lifter.Type == ((int)LifterType.Supply).ToString())
+            if (lifter != null && lifter.Type == (int)LifterType.Supply)
             {
                 try
                 {
@@ -244,30 +227,19 @@ namespace AgvDispatchor
                                 }
                                 break;
                             case SupplyLifterStatus.Load:
-                                //向仓库供料系统发出请求
-                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Wait, lifter.Code))
+                                if (true)   //判断Buffer上是否有料车
                                 {
-                                }
-                                else
-                                {
-                                    Message("Supply lifter: " + lifter.Code + " set status to Wait fail", MessageType.Error);
-                                }
-                                break;
-                            case SupplyLifterStatus.Wait:
-                                if (true)   //收到仓库供料系统的响应
-                                {
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Response, lifter.Code))
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Ready, lifter.Code))
                                     {
                                     }
                                     else
                                     {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Response fail", MessageType.Error);
+                                        Message("Supply lifter: " + lifter.Code + " set status to Ready fail", MessageType.Error);
                                     }
                                 }
                                 break;
-                            case SupplyLifterStatus.Response:
+                            case SupplyLifterStatus.Ready:
                                 //转动链条
-                                //更改物料请求表
                                 if (db.SetSupplyLifterStatus(SupplyLifterStatus.ChainRoll, lifter.Code))
                                 {
                                 }
@@ -279,6 +251,14 @@ namespace AgvDispatchor
                             case SupplyLifterStatus.ChainRoll:
                                 if (true)   //用Sensor判断料车已经到达升降机
                                 {
+                                    if (db.AssignMaterialsToLifter(lifter.Code))    //物料指派给升降机
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Assign Materials to " + lifter.Code + " fail", MessageType.Error);
+                                    }
+
                                     if (db.SetSupplyLifterStatus(SupplyLifterStatus.Pullin, lifter.Code))
                                     {
                                     }
@@ -311,8 +291,7 @@ namespace AgvDispatchor
                                 }
                                 break;
                             case SupplyLifterStatus.Avoid:
-                                carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
-                                if (carrierCode == null && carrierCode != string.Empty)
+                                if (db.ExistMaterialRequests() > 0)
                                 {
                                     if (true)   //用Sensor判断搬送车是否已经到位
                                     {
@@ -341,6 +320,28 @@ namespace AgvDispatchor
                                 {
                                     if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unload, lifter.Code))
                                     {
+                                        string carrCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, LifterType.Supply);
+                                        if (carrCode != null && carrCode != string.Empty)
+                                        {
+                                            if (db.AssignMaterialsToCarrier(lifter.Code, carrCode))     //物料分配到搬送车
+                                            {
+                                                if (db.AssignMaterialsOnCarrierToDevice(carrCode))      //更改物料请求表，分配每个物料的目的地
+                                                {
+                                                }
+                                                else
+                                                {
+                                                    Message("Assign materials from carrier: " + carrCode + " to device fail", MessageType.Error);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Message("Assign materials from lifter: " + lifter.Code + " to carrier fail", MessageType.Error);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Message("Get carrier in lifter queue fail", MessageType.Error);
+                                        }
                                     }
                                     else
                                     {
@@ -351,12 +352,12 @@ namespace AgvDispatchor
                             case SupplyLifterStatus.Unload:
                                 if (true)   //用Sensor判断搬送车是否已离开
                                 {
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Leave, lifter.Code))
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifter.Code))
                                     {
                                     }
                                     else
                                     {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Leave fail", MessageType.Error);
+                                        Message("Supply lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
                                     }
                                 }
                                 else
@@ -371,16 +372,6 @@ namespace AgvDispatchor
                                     {
                                         Message("Supply lifter: " + lifter.Code + " get carrier code fail at unload position", MessageType.Error);
                                     }
-                                }
-                                break;
-                            case SupplyLifterStatus.Leave:
-                                //电机去接料位
-                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifter.Code))
-                                {
-                                }
-                                else
-                                {
-                                    Message("Supply lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
                                 }
                                 break;
                             default:
@@ -409,33 +400,31 @@ namespace AgvDispatchor
     public enum SupplyLifterStatus
     {
         Loading = 0,                    //升降机下降到接料位
-        Load = 1,                         //到达接料位(空闲，可发请求)
-        Wait = 2,                           //等待供料系统响应
-        Response = 3,                   //接到系统响应
-        ChainRoll = 4,                  //链条转动
-        Pullin = 5,                         //料车到达升降机(链条停止)
-        Avoiding = 6,                   //升降机上升到避让位
-        Avoid = 7,                          //到达避让位(等搬送车)，此状态搬送车可进入
-        Arrive = 8,                         //搬送车到位
-        Unloading = 9,                  //升降机下降到下料位
-        Unload = 10,                    //到达下料位(等搬送车)
-        Leave = 11,                     //搬送车已离开
+        Load = 1,                         //到达接料位(空闲)
+        //Wait = 2,                           //等待供料系统响应
+        Ready = 2,                      //升降机的Buffer上有料车
+        ChainRoll = 3,                  //链条转动
+        Pullin = 4,                         //料车到达升降机(链条停止)
+        Avoiding = 5,                   //升降机上升到避让位
+        Avoid = 6,                          //到达避让位(等搬送车)，此状态搬送车可进入
+        Arrive = 7,                         //搬送车到位
+        Unloading = 8,                  //升降机下降到下料位
+        Unload = 9,                    //到达下料位(等搬送车)
     }
 
     public enum RetriveLifterStatus
     {
         Loading = 0,                           //升降机下降到接料位
-        Load = 1,                               //到达接料位(空闲，等搬送车)，此状态搬送车可进入
-        Arrive = 2,                           //搬送车到达
+        Load = 1,                               //到达接料位(空闲)，此状态搬送车可进入
+        Arrive = 2,                             //搬送车到达
         Avoiding = 3,                       //升降机上升到避让位
-        Avoid = 4,                           //到达避让位(等搬送车)
+        Avoid = 4,                              //到达避让位(等搬送车)
         Leave = 5,                              //搬送车已离开
         Unloading = 6,                      //升降机下降到下料位
-        Unload = 7,                         //到达下料位(发请求)
-        Wait = 8,                               //等待供料系统响应
-        Response = 9,                       //接到系统响应
-        ChainRoll = 10,                     //链条转动
-        Pushout = 11,                       //料车已离开升降机(链条停止)
+        Unload = 7,                             //到达下料位
+        //Wait = 8,                               //等待供料系统响应
+        Ready = 8,                              //Buffer上没有料车
+        ChainRoll = 9,                      //链条转动
     }
 
     public enum LifterType

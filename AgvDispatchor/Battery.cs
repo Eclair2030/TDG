@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 
 namespace AgvDispatchor
 {
-    internal class Battery
+    public class Battery
     {
         public Battery()
         { }
 
         public string Code { get; set; }
-        public string Status { get; set; }
+        public int Status { get; set; }
+        public int Position { get; set; }
+        public int QueuePosition { get; set; }
     }
 
     public enum BatteryStatus

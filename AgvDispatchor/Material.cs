@@ -15,10 +15,16 @@ namespace AgvDispatchor
         public string LifterCode { get; set; }
         public string CarrierCode { get; set; }
         public string CarrierIndex { get; set; }
-        public string TargetDeviceCode { get; set; }
-        public string TargetDeviceIndex { get; set; }
+        public int TargetDeviceCode { get; set; }
+        public int TargetDeviceArea { get; set; }
+        public int TargetDeviceIndex { get; set; }
         public string RobotCode { get; set; }
         public string Status { get; set; }
+
+        public static int TOTAL_MATERIAL_ONE_DEVICE = 800;      //一台设备两个通道的上料位总数
+        public static int TOTAL_MATERIAL_ONE_AREA = 40;             //一台设备的一个区域上料位总数
+        public static int TOTAL_MATERIAL_ONE_POSITION = 8;      //搬送车与作业车在一个位置上(不移动)可以上的料总数
+        public static int TOTAL_MATERIAL_ONE_CAR = 36;              //一辆料车上的料总数
     }
 
     public enum MaterialStatus

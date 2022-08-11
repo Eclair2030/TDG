@@ -22,55 +22,42 @@ using System.Windows.Shapes;
 
 namespace AgvDispatchor
 {
+    public delegate void SendMessage(string msg, MessageType mt);
     /// <summary>
     /// MainWindow.xaml 的交互逻辑
     /// </summary>
     public partial class MainWindow : Window
     {
-        HttpWebRequest REQUEST;
-        HttpWebResponse RESPONSE;
-        Thread TH_LIFT;                                //升降机控制线程
+        FmsAction FMS;
+        Thread TH_FIXED;                            //固定部件控制线程
         Thread TH_CARRIER;                       //搬送车控制线程
         Thread TH_ROBOT;                          //作业车控制线程
-        Thread TH_QUEUE_SUPPLY;           //来料升降机队列控制线程
-        Thread TH_QUEUE_RETRIVE;          //回收升降机队列控制线程
-        Thread TH_QUEUE_BATTERY;        //充电队列控制线程
-        Thread TH_REQUEST;                      //物料请求线程
-        Thread TH_ROLLBACK;                   //料车回收线程
-        
+
         MessageManager MM;                  //界面textblock文本显示类
         StoreIO IO;                                         //升降机与仓库供料系统通讯对象
 
-        List<Lifter> LIFTERS;                       //升降机列表
-        List<Carrier> CARRIES;                  //搬送车列表
+        public static List<Lifter> LIFTERS;                       //升降机列表
+        List<Carrier> CARRIES;                                      //搬送车列表
+        public static List<Battery> BATTERYS;           //充电桩列表
 
-        bool CARRIER_CIRCLE, ROBOT_CIRCLE, LIFTER_CIRCLE, REQUEST_CIRCLE, QUEUE_CIRCLE, BATTERY_CIRCLE;
+        bool CARRIER_CIRCLE, ROBOT_CIRCLE, FIXED_CIRCLE;
         string SELECT_CARRIER_CODE, SELECT_ROBOT_CODE, SELECT_LIFTER_CODE;
         int SLEEP_TIME;
-        int SHELF_POSITIONS;                    //一个料车上的料总数
 
         public MainWindow()
         {
             InitializeComponent();
             LIFTERS = new List<Lifter>();
             CARRIES = new List<Carrier>();
-            CARRIER_CIRCLE = ROBOT_CIRCLE = LIFTER_CIRCLE = REQUEST_CIRCLE = QUEUE_CIRCLE = BATTERY_CIRCLE = true;
+            CARRIER_CIRCLE = ROBOT_CIRCLE = FIXED_CIRCLE = true;
             SLEEP_TIME = 5000;
-            SHELF_POSITIONS = 36;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (TH_LIFT != null)
-            {
-                TH_LIFT.Abort();
-            }
             CARRIER_CIRCLE = false;
             ROBOT_CIRCLE = false;
-            LIFTER_CIRCLE = false;
-            REQUEST_CIRCLE = false;
-            QUEUE_CIRCLE = false;
-            BATTERY_CIRCLE = false;
+            FIXED_CIRCLE = false;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -80,78 +67,75 @@ namespace AgvDispatchor
 
             MM = new MessageManager(tbMessage, slView, 20, 99);
             IO = new StoreIO();
+            FMS = new FmsAction(ShowCallbackMessage);
 
-            TH_LIFT = new Thread(LifterAction);
-            TH_LIFT.Start();
+            TH_FIXED = new Thread(FixedAction);
+            TH_FIXED.Start();
             TH_CARRIER = new Thread(AllCarrierAction);
             TH_CARRIER.Start();
             TH_ROBOT = new Thread(AllRobotAction);
             TH_ROBOT.Start();
-            TH_QUEUE_BATTERY = new Thread(ChargeQueueControl);
-            TH_QUEUE_BATTERY.Start();
-            TH_REQUEST = new Thread(RequestJudge);
-            TH_REQUEST.Start();
-            TH_ROLLBACK = new Thread(ShelfRollback);
-            TH_ROLLBACK.Start();
-            TH_QUEUE_SUPPLY = new Thread(SupplyQueueControl);
-            TH_QUEUE_SUPPLY.Start();
-            TH_QUEUE_RETRIVE = new Thread(RetriveQueueControl);
-            TH_QUEUE_RETRIVE.Start();
         }
 
         public void ShowCallbackMessage(string msg, MessageType mt)
         {
             try
             {
-                Dispatcher.Invoke(new Action(() =>{ MM.AddText(msg, mt); }));
+                Dispatcher.Invoke(new Action(() => { MM.AddText(msg, mt); }));
             }
             catch (Exception)
             {
             }
         }
 
-        private void LifterAction()
+        private void FixedAction()
         {
             DbAccess DB = new DbAccess();
             if (DB.Open())
             {
-                while (LIFTER_CIRCLE)
+                while (FIXED_CIRCLE)
                 {
-                    Dispatcher.Invoke(new Action(() =>
-                    {
-                        lvLifters.Items.Clear();
-                    }));
-                    LIFTERS = DB.GetAllLiftersWithType(LifterType.None);
-                    if (LIFTERS != null && LIFTERS.Count > 0)
-                    {
-                        for (int i = 0; i < LIFTERS.Count; i++)
-                        {
-                            Dispatcher.Invoke(new Action(() =>
-                            {
-                                ListViewItem item = new ListViewItem();
-                                item.Content = LIFTERS[i];
-                                lvLifters.Items.Add(item);
-                            }));
-                            LIFTERS[i].Message = ShowCallbackMessage;
-                            Thread thOneLift;
-                            if (LIFTERS[i].Type == ((int)LifterType.Retrive).ToString())
-                            {
-                                thOneLift = new Thread(LIFTERS[i].RetriveLifterAction);
-                            }
-                            else
-                            {
-                                thOneLift = new Thread(LIFTERS[i].SupplyLifterAction);
-                            }
-                            thOneLift.Start(LIFTERS[i]);
-                        }
-                        RefreshLifterQueues();
-                    }
-                    else
+                    try
                     {
                         Dispatcher.Invoke(new Action(() =>
                         {
-                            MM.AddText("there is no lifter exist", MessageType.Exception);
+                            lvLifters.Items.Clear();
                         }));
+                        LIFTERS = DB.GetAllLiftersWithType(LifterType.None);
+                        if (LIFTERS != null && LIFTERS.Count > 0)
+                        {
+                            for (int i = 0; i < LIFTERS.Count; i++)
+                            {
+                                Dispatcher.Invoke(new Action(() =>
+                                {
+                                    ListViewItem item = new ListViewItem();
+                                    item.Content = LIFTERS[i];
+                                    lvLifters.Items.Add(item);
+                                }));
+                                LIFTERS[i].Message = ShowCallbackMessage;
+                                Thread thOneLift;
+                                if (LIFTERS[i].Type == (int)LifterType.Retrive)
+                                {
+                                    thOneLift = new Thread(LIFTERS[i].RetriveLifterAction);
+                                }
+                                else
+                                {
+                                    thOneLift = new Thread(LIFTERS[i].SupplyLifterAction);
+                                }
+                                thOneLift.Start(LIFTERS[i]);
+                            }
+                            RefreshLifterQueues();
+                            AllBatteryAction(DB);
+                            LifterQueueControl(DB);
+                            ChargeQueueControl(DB);
+                        }
+                        else
+                        {
+                            ShowCallbackMessage("there is no lifter exist", MessageType.Exception);
+                        }
+                    }
+                    catch (Exception)
+                    {
                     }
                     Thread.Sleep(SLEEP_TIME);
                 }
@@ -256,265 +240,135 @@ namespace AgvDispatchor
             DB.Close();
         }
 
-        private void ChargeQueueControl()
+        private void AllBatteryAction(DbAccess DB)
         {
-            DbAccess DB = new DbAccess();
-            if (DB.Open())
+            BATTERYS = DB.GetAllBatterys();
+            if (BATTERYS != null && BATTERYS.Count > 0)
             {
-                while (BATTERY_CIRCLE)
+                for (int i = 0; i < BATTERYS.Count; i++)
                 {
-                    try
+                    Dispatcher.Invoke(new Action(() =>
                     {
-                        Dispatcher.Invoke(new Action(() =>
+                        Rectangle rect = (Rectangle)FindName("rtBattery" + (i + 1));
+                        if (rect != null)
                         {
-                        }));
-                        List<Carrier> carriers = DB.FindLowPowerCarriers();
-                        if (carriers != null)
-                        {
-                            for(int i = 0;i < carriers.Count;i++)
+                            if (BATTERYS[i].Status == (int)BatteryStatus.Idle)
                             {
-                                //Carrier去充电
-                                if (DB.AddAGVToChargeQueue(carriers[i].Code) && DB.SetCarrierStatus(carriers[i].Code, CarrierStatus.Charge))
-                                {
-                                    ShowCallbackMessage(carriers[i].Code + " add to charge queue", MessageType.Result);
-                                }
-                                else
-                                {
-                                    ShowCallbackMessage(carriers[i].Code + " add to charge queue fail", MessageType.Error);
-                                }
+                                rect.Fill = Brushes.Lime;
+                            }
+                            else
+                            {
+                                rect.Fill = Brushes.Red;
                             }
                         }
-                        if (DB.ChargeQueueAutoCheck())
-                        {
-                            
-                        }
-                        else
-                        {
-                            ShowCallbackMessage("charge queue auto forward fail", MessageType.Error);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    Thread.Sleep(SLEEP_TIME);
+                    }));
                 }
             }
             else
             {
-                ShowCallbackMessage("charge queue control data base open fail", MessageType.Error);
+                ShowCallbackMessage("thers is no Battery exist", MessageType.Exception);
             }
-            DB.Close();
         }
 
-        private void RequestJudge()
+        private void ChargeQueueControl(DbAccess DB)
         {
-            DbAccess DB = new DbAccess();
-            if (DB.Open())
+            string firstAgv = DB.ChargeQueueAutoCheck();
+            if (firstAgv == null)
             {
-                try
+                ShowCallbackMessage("charge queue auto forward fail", MessageType.Error);
+            }
+            else if (firstAgv == string.Empty)
+            {
+                //ShowCallbackMessage("charge queue auto 1 step forward", MessageType.Default);
+            }
+            else
+            {
+                for (int i = 0; i < BATTERYS.Count; i++)
                 {
-                    while (REQUEST_CIRCLE)
+                    if (BATTERYS[i].Status == (int)BatteryStatus.Idle)
                     {
-                        if (DB.ExistMaterialRequests() > 0)
+                        if (FMS.GetAgvInfo(firstAgv) == AgvState.IDLE.ToString())
                         {
-                            List<Lifter> list = DB.GetLiftersWithStatus(LifterType.Supply, (int)SupplyLifterStatus.Avoid);
-                            if (list != null)
+                            if (FMS.AgvMove(firstAgv, BATTERYS[i].Position) == FmsActionResult.Success)
                             {
-                                for (int i = 0; i < list.Count; i++)
+                                if (DB.SetCarrierStatus(firstAgv, CarrierStatus.Charging))
                                 {
-                                    if (true)   //用Sensor判断升降机下是否有小车就位
+                                    if (DB.ChargeQueueDeleteZero())
                                     {
-                                        continue;
                                     }
                                     else
                                     {
-                                        List<CarrierInLifterQueue> queue = DB.GetLifterQueue(list[i].Code);
-                                        if (queue != null)
-                                        {
-                                            string code = string.Empty;
-                                            for (int j = 0; j < queue.Count; j++)
-                                            {
-                                                if (Convert.ToInt32(queue[j].Number) == 0)
-                                                {
-                                                    code = queue[j].Code;
-                                                    break;
-                                                }
-                                            }
-                                            if (code != string.Empty)
-                                            {
-                                                for (int k = 0; k < SHELF_POSITIONS; k++)
-                                                {
-                                                    if (DB.AssignMaterialsToLifter(list[i].Code, k+1))
-                                                    {
-                                                        if (DB.MakeResponse())
-                                                        {
-                                                        }
-                                                        else
-                                                        {
-                                                            ShowCallbackMessage("Update request to make response fail", MessageType.Error);
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        ShowCallbackMessage("Assign Materials to " + list[i].Code + " fail", MessageType.Error);
-                                                    }
-                                                }
-                                                
-                                                //排0号搬送车去往升降机
-                                                //到达升降机后 DB.SetCarrierStatus(code, CarrierStatus.Initing);
-                                            }
-                                        }
+                                        ShowCallbackMessage("Remove first agv from charge queue fail", MessageType.Error);
                                     }
-                                }
-                            }
-                        }
-                        Thread.Sleep(SLEEP_TIME);
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            }
-            else
-            {
-                ShowCallbackMessage("Material request system data base open fail", MessageType.Error);
-            }
-            DB.Close();
-        }
-
-        private void ShelfRollback()
-        {
-            DbAccess DB = new DbAccess();
-            if (DB.Open())
-            {
-                try
-                {
-                    while (REQUEST_CIRCLE)
-                    {
-                        List<Lifter> lifters = DB.GetLiftersWithStatus(LifterType.Retrive, (int)SupplyLifterStatus.Load);
-                        if (lifters != null)
-                        {
-                            for (int i = 0; i < lifters.Count; i++)
-                            {
-                                if (true)   //Sensor判断升降机是否有搬送车就位
-                                {
-                                    continue;
                                 }
                                 else
                                 {
-                                    List<CarrierInLifterQueue> queue = DB.GetLifterQueue(lifters[i].Code);
-                                    if (queue != null)
+                                    ShowCallbackMessage("Set agv: " + firstAgv + " status to charging fail", MessageType.Error);
+                                }
+                            }
+                            else
+                            {
+                                ShowCallbackMessage("Agv: " + firstAgv + " move to battery: " + BATTERYS[i].Code + " fail", MessageType.Error);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void LifterQueueControl(DbAccess DB)
+        {
+            if (LIFTERS != null)
+            {
+                for (int i = 0; i < LIFTERS.Count; i++)
+                {
+                    string firstCarr = DB.LifterQueueAutoCheck(LIFTERS[i].Code);
+                    if (firstCarr == null)
+                    {
+                        ShowCallbackMessage("queue for " + LIFTERS[i].Code + " auto forward fail", MessageType.Error);
+                    }
+                    else if (firstCarr == string.Empty)
+                    {
+                        //ShowCallbackMessage("queue for " + LIFTERS[i].Code + " 1 step forward", MessageType.Default);
+                    }
+                    else
+                    {
+                        if ( ( (LIFTERS[i].Type == (int)LifterType.Supply && LIFTERS[i].Status == (int)SupplyLifterStatus.Avoid) ||
+                            (LIFTERS[i].Type == (int)LifterType.Retrive && LIFTERS[i].Status == (int)RetriveLifterStatus.Load) )
+                            && FMS.GetAgvInfo(firstCarr) == AgvState.IDLE.ToString())
+                        {
+                            if (FMS.AgvMove(firstCarr, LIFTERS[i].Position) == FmsActionResult.Success)
+                            {
+                                if (LIFTERS[i].Type == (int)LifterType.Supply)
+                                {
+                                    if (DB.SetCarrierStatus(firstCarr, CarrierStatus.Initing))
+                                    { }
+                                    else
                                     {
-                                        string code = string.Empty;
-                                        for (int j = 0; j < queue.Count; j++)
-                                        {
-                                            if (Convert.ToInt32(queue[j].Number) == 0)
-                                            {
-                                                code = queue[j].Code;
-                                                break;
-                                            }
-                                        }
-                                        if (code != string.Empty)
-                                        {
-                                            //排0号搬送车去往升降机
-                                            //到达升降机后 DB.SetCarrierStatus(code, CarrierStatus.Retrieving);
-                                        }
+                                        ShowCallbackMessage("carrier: " + firstCarr + " status set to initing fail", MessageType.Error);
+                                    }
+                                }
+                                else
+                                {
+                                    if (DB.SetCarrierStatus(firstCarr, CarrierStatus.Retrieving))
+                                    { }
+                                    else
+                                    {
+                                        ShowCallbackMessage("carrier: " + firstCarr + " status set to retrieving fail", MessageType.Error);
                                     }
                                 }
                             }
+                            else
+                            {
+                                ShowCallbackMessage("first carrier in queue: " + firstCarr + " move to lifter: " + LIFTERS[i].Code + " fail", MessageType.Error);
+                            }
                         }
-                        Thread.Sleep(SLEEP_TIME);
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            }
-            else
-            {
-                ShowCallbackMessage("Shelf roll back system data base open fail", MessageType.Error);
-            }
-            DB.Close();
-        }
-
-        private void SupplyQueueControl()
-        {
-            DbAccess DB = new DbAccess();
-            if (DB.Open())
-            {
-                while (QUEUE_CIRCLE)
-                {
-                    if (LIFTERS != null)
-                    {
-                        for (int i = 0; i < LIFTERS.Count; i++)
+                        else
                         {
-                            if (DB.LifterQueueAutoCheck(LIFTERS[i].Code))
-                            {
-                                ShowCallbackMessage("queue for " + LIFTERS[i].Code + " 1 step forward", MessageType.Default);
-                            }
-                            List<Carrier> carriers = DB.GetCarriersByStatus(CarrierStatus.Ready);
-                            if (carriers != null && carriers.Count > 0)
-                            {
-                                if (DB.AddCarrierToShortestQueue(LifterType.Supply, carriers[0].Code))
-                                {
-                                    //小车去队列排队
-                                    DB.SetCarrierStatus(carriers[0].Code, CarrierStatus.Init);
-                                }
-                                else
-                                {
-                                    ShowCallbackMessage("Queue control add carrier to queue fail", MessageType.Error);
-                                }
-                            }
                         }
                     }
-                    Thread.Sleep(SLEEP_TIME);
                 }
             }
-            else
-            {
-                ShowCallbackMessage("Queue control data base open fail", MessageType.Error);
-            }
-            DB.Close();
-        }
-
-        private void RetriveQueueControl()
-        {
-            DbAccess DB = new DbAccess();
-            if (DB.Open())
-            {
-                while (QUEUE_CIRCLE)
-                {
-                    if (LIFTERS != null)
-                    {
-                        for (int i = 0; i < LIFTERS.Count; i++)
-                        {
-                            if (DB.LifterQueueAutoCheck(LIFTERS[i].Code))
-                            {
-                                ShowCallbackMessage("queue for " + LIFTERS[i].Code + " 1 step forward", MessageType.Default);
-                            }
-                            List<Carrier> carriers = DB.GetCarriersByStatus(CarrierStatus.Complete);
-                            if (carriers != null && carriers.Count > 0)
-                            {
-                                if (DB.AddCarrierToShortestQueue(LifterType.Retrive, carriers[0].Code))
-                                {
-                                    //小车去队列排队
-                                    DB.SetCarrierStatus(carriers[0].Code, CarrierStatus.Retrieve);
-                                }
-                                else
-                                {
-                                    ShowCallbackMessage("Queue control add carrier to queue fail", MessageType.Error);
-                                }
-                            }
-                        }
-                    }
-                    Thread.Sleep(SLEEP_TIME);
-                }
-            }
-            else
-            {
-                ShowCallbackMessage("Queue control data base open fail", MessageType.Error);
-            }
-            DB.Close();
         }
 
         private void RefreshMaterialsOnCarrier()
@@ -551,7 +405,7 @@ namespace AgvDispatchor
                                     if (lab != null)
                                     {
                                         lab.Background = Brushes.Lime;
-                                        lab.Content = "Device :" + materials[i].TargetDeviceCode + " , Index: " + materials[i].TargetDeviceIndex;
+                                        lab.Content = "Dev: " + materials[i].TargetDeviceCode + ", Area: " + materials[i].TargetDeviceArea + ", Index: " + materials[i].TargetDeviceIndex;
                                     }
                                 }));
                             }
@@ -567,7 +421,6 @@ namespace AgvDispatchor
                 ShowCallbackMessage("Refresh material list data base open fail", MessageType.Error);
             }
             DB.Close();
-            
         }
 
         private void RefreshLifterQueues()
@@ -608,7 +461,6 @@ namespace AgvDispatchor
                 ShowCallbackMessage("Refresh lifter: " + SELECT_LIFTER_CODE + " queue data base open fail", MessageType.Error);
             }
             DB.Close();
-
         }
 
         private void RefreshRobotDetails()
@@ -674,15 +526,34 @@ namespace AgvDispatchor
                     DbAccess DB = new DbAccess();
                     if (DB.Open() && DB.SetRequestOnByDeviceID(cbDevice.Text))
                     {
-                        MM.AddText("Device: "+ cbDevice.Text + " shelf turn arround complete, refresh requests", MessageType.Result);
+                        ShowCallbackMessage("Device: "+ cbDevice.Text + " shelf turn arround complete, refresh requests", MessageType.Result);
                     }
                     DB.Close();
                 }
             }
             catch (Exception)
             {
-                MM.AddText("Device: " + cbDevice.Text + " shelf turn arround unsuccessful", MessageType.Error);
+                ShowCallbackMessage("Device: " + cbDevice.Text + " shelf turn arround unsuccessful", MessageType.Error);
             }
         }
+
+        private void btnTest_Click(object sender, RoutedEventArgs e)
+        {
+            if (FMS.AgvMove("8", (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+            {
+                ShowCallbackMessage("Carrier start to transport success.", MessageType.Result);
+            }
+            else
+            {
+                ShowCallbackMessage("Carrier start to transport fail", MessageType.Error);
+            }
+        }
+
+        private void btnInfo_Click(object sender, RoutedEventArgs e)
+        {
+            string str = FMS.GetAgvInfo("8");
+            ShowCallbackMessage(str, MessageType.Result);
+        }
+
     }
 }

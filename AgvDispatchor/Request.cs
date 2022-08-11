@@ -11,9 +11,10 @@ namespace AgvDispatchor
         public Request()
         { }
 
-        public string DeviceCode { get; set; }
-        public string DeviceIndex { get; set; }
-        public string RequestCode { get; set; }
+        public int DeviceCode { get; set; }
+        public int DeviceArea { get; set; }
+        public int DeviceIndex { get; set; }
+        public int RequestCode { get; set; }
         public string LastResponseTime { get; set; }
     }
 

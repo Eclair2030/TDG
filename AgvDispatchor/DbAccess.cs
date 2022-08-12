@@ -189,6 +189,34 @@ namespace AgvDispatchor
             }
             return carrierCode;
         }
+
+        public int GetCarrierTargetPosition(string carrCode)
+        {
+            int pos = -1;
+            string sql = "select * from Materials where Status = " + (int)MaterialStatus.Carrier + " and CarrierCode = '" + carrCode + "' order by " +
+                    "TargetDeviceCode asc, TargetDeviceArea asc, TargetDeviceIndex asc";
+            try
+            {
+                SqlCommand scom = new SqlCommand(sql, CONN);
+                SqlDataReader r = scom.ExecuteReader();
+                if (r != null && r.HasRows)
+                {
+                    while (r.Read())
+                    {
+                        int dCode = Convert.ToInt32(r["TargetDeviceCode"]);
+                        int dArea = Convert.ToInt32(r["TargetDeviceArea"]);
+                        int dIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
+                        pos = dCode * Material.TOTAL_MATERIAL_ONE_DEVICE / Material.TOTAL_MATERIAL_ONE_POSITION
+                            + dArea * Material.TOTAL_MATERIAL_ONE_AREA / Material.TOTAL_MATERIAL_ONE_POSITION
+                            + dIndex / Material.TOTAL_MATERIAL_ONE_POSITION;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return pos;
+        }
         #endregion
         #region Lifters
         public List<Lifter> GetAllLiftersWithType(LifterType type)
@@ -536,15 +564,15 @@ namespace AgvDispatchor
                     {
                         Robot robot = new Robot();
                         robot.Code = reader["Code"].ToString();
-                        robot.Status = reader["Status"].ToString();
+                        robot.Status = Convert.ToInt32(reader["Status"]);
                         robot.Battery = reader["Battery"].ToString();
-                        robot.Coordination = reader["Coordination"].ToString();
-                        robot.Process = reader["Process"].ToString();
-                        robot.DeviceIndex = reader["DeviceIndex"].ToString();
-                        robot.CarrierIndex = reader["CarrierIndex"].ToString();
-                        robot.Buffer1 = reader["Buffer1"].ToString();
-                        robot.Buffer2 = reader["Buffer2"].ToString();
-                        robot.Arm = reader["Arm"].ToString();
+                        robot.Coordination = Convert.ToInt32(reader["Coordination"]);
+                        robot.Process = Convert.ToInt32(reader["Process"]);
+                        robot.DeviceIndex = Convert.ToInt32(reader["DeviceIndex"]);
+                        robot.CarrierIndex = Convert.ToInt32(reader["CarrierIndex"]);
+                        robot.Buffer1 = Convert.ToInt32(reader["Buffer1"]);
+                        robot.Buffer2 = Convert.ToInt32(reader["Buffer2"]);
+                        robot.Arm = Convert.ToInt32(reader["Arm"]);
                         list.Add(robot);
                     }
                 }
@@ -612,9 +640,10 @@ namespace AgvDispatchor
             {
                 int total_materials = Material.TOTAL_MATERIAL_ONE_CAR;
                 int circle = 0;
+                string sql = string.Empty;
                 while (total_materials > 0)
                 {
-                    string sql = "select count(*) from Carriers where WorkDevice = ((select top 1 DeviceCode from Requests where RequestCode = 1 order by DeviceCode asc) + " + circle + ")";
+                    sql = "select count(*) from Carriers where WorkDevice = ((select top 1 DeviceCode from Requests where RequestCode = 1 order by DeviceCode asc) + " + circle + ")";
                     if (CONN.State == System.Data.ConnectionState.Open)
                     {
                         SqlCommand com = new SqlCommand(sql, CONN);
@@ -669,7 +698,6 @@ namespace AgvDispatchor
                                             com2.ExecuteNonQuery();
                                             com2.Dispose();
                                         }
-                                        res = true;
                                     }
                                     reader.Close();
                                     com.Dispose();
@@ -691,6 +719,28 @@ namespace AgvDispatchor
                             break;
                         }
                     }
+                }
+                sql = "select top 1 * from Materials where Status = " + (int)MaterialStatus.Carrier + " and CarrierCode = '" + carrCode + "' order by " + 
+                    "TargetDeviceCode asc, TargetDeviceArea asc, TargetDeviceIndex asc";
+                SqlCommand scom = new SqlCommand(sql, CONN);
+                SqlDataReader r = scom.ExecuteReader();
+                if (r != null && r.HasRows)
+                {
+                    while (r.Read())
+                    {
+                        int dCode = Convert.ToInt32(r["TargetDeviceCode"]);
+                        int dArea = Convert.ToInt32(r["TargetDeviceArea"]);
+                        int dIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
+                        sql = "update Carriers set WorkCode = " + dCode + ", WorkArea = " + dArea + ", WorkIndex = " + dIndex +
+                            " where CarrierCode = '" + carrCode + "'";
+                        SqlCommand c1 = new SqlCommand(sql, CONN);
+                        c1.ExecuteNonQuery();
+                        c1.Dispose();
+                    }
+                }
+                if (total_materials == 0)
+                {
+                    res = true;
                 }
             }
             catch (Exception)
@@ -787,7 +837,7 @@ namespace AgvDispatchor
                     {
                         Robot robot = new Robot();
                         robot.Code = reader["Code"].ToString();
-                        robot.Status = reader["Status"].ToString();
+                        robot.Status = Convert.ToInt32(reader["Status"]);
                         robot.Battery = reader["Battery"].ToString();
                         list.Add(robot);
                     }

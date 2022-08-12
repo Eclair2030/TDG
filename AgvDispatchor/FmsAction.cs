@@ -40,8 +40,8 @@ namespace AgvDispatchor
 
         public string GetAgvInfo(string carrierCode)
         {
-            return GetAgvInfoByName(GetResponse(carrierCode, INFO_URL), SYS_STATE_NAME);
-            //return GetResponse(carrierCode, INFO_URL);
+            //return GetAgvInfoByName(GetResponse(carrierCode, INFO_URL), SYS_STATE_NAME);
+            return GetResponse(carrierCode, INFO_URL);
         }
 
         private string MakeCarrierMoveRequestPostBody(string carrierCode, int dest)

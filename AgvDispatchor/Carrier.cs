@@ -103,23 +103,14 @@ namespace AgvDispatchor
                             {
                                 if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
                                 {
-                                    int pos = -1;
-                                    for (int i = 0; i < materials.Count; i++)
-                                    {
-                                        if (materials[i].Status == MaterialStatus.Carrier.ToString())
-                                        {
-                                            pos = materials[i].TargetDeviceCode  * Material.TOTAL_MATERIAL_ONE_DEVICE 
-                                                + materials[i].TargetDeviceArea  * Material.TOTAL_MATERIAL_ONE_AREA
-                                                + materials[i].TargetDeviceIndex / 8 + (int)FmsCarrierPosition.Dev1;
-                                            break;
-                                        }
-                                    }
+                                    int pos = Db.GetCarrierTargetPosition(Code);
                                     if (pos == -1)
                                     {
+                                        Message("Carrier: " + Code + " get target position fail", MessageType.Error);
                                         break;
                                     }
 
-                                    if (fms.AgvMove(Code, pos) == FmsActionResult.Success)
+                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
                                     {
                                     }
                                     else
@@ -152,22 +143,14 @@ namespace AgvDispatchor
                         {
                             if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
                             {
-                                int pos = -1;
-                                for (int i = 0; i < materials.Count; i++)
-                                {
-                                    if (materials[i].Status == MaterialStatus.Carrier.ToString())
-                                    {
-                                        pos = materials[i].TargetDeviceCode * Material.TOTAL_MATERIAL_ONE_DEVICE
-                                            + materials[i].TargetDeviceArea * Material.TOTAL_MATERIAL_ONE_AREA
-                                            + materials[i].TargetDeviceIndex / 8 + (int)FmsCarrierPosition.Dev1;
-                                        break;
-                                    }
-                                }
+                                int pos = Db.GetCarrierTargetPosition(Code);
                                 if (pos == -1)
                                 {
+                                    Message("Carrier: " + Code + " get target position fail", MessageType.Error);
                                     break;
                                 }
-                                if (fms.AgvMove(Code, pos) == FmsActionResult.Success)
+
+                                if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
                                 {
                                 }
                                 else
@@ -176,7 +159,6 @@ namespace AgvDispatchor
                                 }
                             }
                         }
-                        
                         break;
                     case CarrierStatus.Complete:
                         if (Db.SetCarrierStatus(Code, CarrierStatus.Retrieve))

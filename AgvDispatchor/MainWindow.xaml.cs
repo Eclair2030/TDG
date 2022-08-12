@@ -547,6 +547,38 @@ namespace AgvDispatchor
             {
                 ShowCallbackMessage("Carrier start to transport fail", MessageType.Error);
             }
+
+            string requestString = "{\"appoint_vehicle_id\" : 8," +
+                "\"mission\" : [ {" +
+                "\"type\" : \"move\",\"destination\" : " + (int)FmsCarrierPosition.SupplyLifter + ",\"map_id\" : 12," +
+                "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 1,\"action_param2\" : 1 } ]," +
+                "\"priority\" : 0,\"user_id\" : 1}";
+            Stream resStream = null;
+            byte[] body = Encoding.UTF8.GetBytes(requestString);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://192.168.30.101:8088/api/v2/orders");
+            request.Method = "POST";
+            request.KeepAlive = true;
+            request.Host = "192.168.30.101:8088";
+            request.ContentType = "application/json;charset=UTF-8";
+            request.ContentLength = body.Length;
+            request.Headers.Add("token", "YWRtaW4sMTk3NDg2OTYzMDc2OSw3ODBjOGI5Mzk2YzgxMWVjMDVmODQ0YmQ0YjE1ZDA0Zg==");
+            try
+            {
+                Stream st = request.GetRequestStream();
+                st.Write(body, 0, body.Length);
+                st.Close();
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                ShowCallbackMessage("Response status code: " + response.StatusCode, MessageType.Result);
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    resStream = response.GetResponseStream();
+                }
+                response.Close();
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Error);
+            }
         }
 
         private void btnInfo_Click(object sender, RoutedEventArgs e)

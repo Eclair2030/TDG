@@ -587,5 +587,9 @@ namespace AgvDispatchor
             ShowCallbackMessage(str, MessageType.Result);
         }
 
+        private void BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

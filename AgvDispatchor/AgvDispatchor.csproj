@@ -83,6 +83,7 @@
     <Compile Include="MessageManager.cs" />
     <Compile Include="Request.cs" />
     <Compile Include="Robot.cs" />
+    <Compile Include="RobotPoint.cs" />
     <Compile Include="StoreIO.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

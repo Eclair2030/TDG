@@ -193,12 +193,12 @@ namespace AgvDispatchor
         public int GetCarrierTargetPosition(string carrCode)
         {
             int pos = -1;
-            string sql = "select * from Materials where Status = " + (int)MaterialStatus.Carrier + " and CarrierCode = '" + carrCode + "' order by " +
+            string sql = "select top 1 * from Materials where Status = " + (int)MaterialStatus.Carrier + " and CarrierCode = '" + carrCode + "' order by " +
                     "TargetDeviceCode asc, TargetDeviceArea asc, TargetDeviceIndex asc";
             try
             {
-                SqlCommand scom = new SqlCommand(sql, CONN);
-                SqlDataReader r = scom.ExecuteReader();
+                SqlCommand com = new SqlCommand(sql, CONN);
+                SqlDataReader r = com.ExecuteReader();
                 if (r != null && r.HasRows)
                 {
                     while (r.Read())
@@ -208,14 +208,39 @@ namespace AgvDispatchor
                         int dIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
                         pos = dCode * Material.TOTAL_MATERIAL_ONE_DEVICE / Material.TOTAL_MATERIAL_ONE_POSITION
                             + dArea * Material.TOTAL_MATERIAL_ONE_AREA / Material.TOTAL_MATERIAL_ONE_POSITION
-                            + dIndex / Material.TOTAL_MATERIAL_ONE_POSITION;
+                            + dIndex * Material.TOTAL_AGVS_ONE_POSITION / Material.TOTAL_MATERIAL_ONE_POSITION;
+                    }
+                    if (pos != -1)
+                    {
+                        sql = "update Carriers set TargetPosition = " + pos + " where Code = '" + carrCode + "'";
+                        com = new SqlCommand(sql, CONN);
+                        com.ExecuteNonQuery();
                     }
                 }
+                com.Dispose();
+                r.Close();
             }
             catch (Exception)
             {
             }
             return pos;
+        }
+
+        public int GetCarrierStatusByRobot(string robCode, int coord)
+        {
+            int status = -1;
+            string sql = "select status from Carriers where Robot_" + coord + " = '" + robCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object obj = com.ExecuteScalar();
+                com.Dispose();
+                if (obj != null)
+                {
+                    status = Convert.ToInt32(obj);
+                }
+            }
+            return status;
         }
         #endregion
         #region Lifters
@@ -527,6 +552,29 @@ namespace AgvDispatchor
             return res;
         }
 
+        public int GetDeviceStaffState(int tarCode, int tarArea, int tarIndex)
+        {
+            int state = -1;
+            try
+            {
+                string sql = "select Status from Requests where DeviceCode = " + tarCode + " and DeviceArea = " + tarArea + " and DeviceIndex = " + tarIndex;
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object s = com.ExecuteScalar();
+                    com.Dispose();
+                    if (s != null)
+                    {
+                        state = Convert.ToInt32(s);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return state;
+        }
+
         public bool InitDevicebyDeviceID(int deviceID)
         {
             bool res = false;
@@ -573,6 +621,9 @@ namespace AgvDispatchor
                         robot.Buffer1 = Convert.ToInt32(reader["Buffer1"]);
                         robot.Buffer2 = Convert.ToInt32(reader["Buffer2"]);
                         robot.Arm = Convert.ToInt32(reader["Arm"]);
+                        robot.IpAddress = reader["IpAddress"].ToString();
+                        robot.Port = Convert.ToInt32(reader["Port"]);
+                        robot.Points = new List<RobotPoint>(10);
                         list.Add(robot);
                     }
                 }
@@ -588,6 +639,274 @@ namespace AgvDispatchor
             }
             com.Dispose();
             return list;
+        }
+
+        public bool RefreshAllRobots(ref List<Robot> list)
+        {
+            bool result = false;
+            string sql = "select * from Robots";
+            SqlCommand com = new SqlCommand(sql, CONN);
+            SqlDataReader reader = null;
+            try
+            {
+                reader = com.ExecuteReader();
+                if (reader != null && reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            if (list[i].Code == reader["Code"].ToString())
+                            {
+                                list[i].Code = reader["Code"].ToString();
+                                list[i].Status = Convert.ToInt32(reader["Status"]);
+                                list[i].Battery = reader["Battery"].ToString();
+                                list[i].Coordination = Convert.ToInt32(reader["Coordination"]);
+                                list[i].Process = Convert.ToInt32(reader["Process"]);
+                                list[i].DeviceIndex = Convert.ToInt32(reader["DeviceIndex"]);
+                                list[i].CarrierIndex = Convert.ToInt32(reader["CarrierIndex"]);
+                                list[i].Buffer1 = Convert.ToInt32(reader["Buffer1"]);
+                                list[i].Buffer2 = Convert.ToInt32(reader["Buffer2"]);
+                                list[i].Arm = Convert.ToInt32(reader["Arm"]);
+                                list[i].IpAddress = reader["IpAddress"].ToString();
+                                list[i].Port = Convert.ToInt32(reader["Port"]);
+                                break;
+                            }
+                        }
+                    }
+                    if (reader != null)
+                        reader.Close();
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        sql = "select * from RobotPoints where Code = '" + list[i].Code + "'";
+                        SqlCommand c = new SqlCommand(sql, CONN);
+                        SqlDataReader r = c.ExecuteReader();
+                        c.Dispose();
+                        if (r != null && r.HasRows)
+                        {
+                            int j = 0;
+                            while (r.Read())
+                            {
+                                list[i].Points[j].Code = list[i].Code;
+                                list[i].Points[j].PtName = reader["PtName"].ToString();
+                                list[i].Points[j].J1 = Convert.ToDouble(reader["J1"]);
+                                list[i].Points[j].J2 = Convert.ToDouble(reader["J2"]);
+                                list[i].Points[j].J3 = Convert.ToDouble(reader["J3"]);
+                                list[i].Points[j].J4 = Convert.ToDouble(reader["J4"]);
+                                list[i].Points[j].J5 = Convert.ToDouble(reader["J5"]);
+                                list[i].Points[j].J6 = Convert.ToDouble(reader["J6"]);
+                                list[i].Points[j].X = Convert.ToDouble(reader["X"]);
+                                list[i].Points[j].Y = Convert.ToDouble(reader["Y"]);
+                                list[i].Points[j].Z = Convert.ToDouble(reader["Z"]);
+                                list[i].Points[j].RX = Convert.ToDouble(reader["RX"]);
+                                list[i].Points[j].RY = Convert.ToDouble(reader["RY"]);
+                                list[i].Points[j].RZ = Convert.ToDouble(reader["RZ"]);
+                                j++;
+                            }
+                        }
+                        if (r != null)
+                            r.Close();
+                    }
+                    
+                    result = true;
+                }
+            }
+            catch (Exception)
+            {
+                result = false;
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+            com.Dispose();
+            return result;
+        }
+
+        public bool SetRobotStatus(string code, RobotStatus status)
+        {
+            bool result = false;
+            string sql = "update Robots set status = " + (int)status + " where Code = '" + code + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                result = true;
+            }
+            return result;
+        }
+
+        public bool SetRobotStatusAndProcess(string code, RobotStatus status, int process)
+        {
+            bool result = false;
+            string sql = "update Robots set status = " + (int)status + ", Process = " + process + " where Code = '" + code + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                result = true;
+            }
+            return result;
+        }
+
+        public bool SetRobotIndexs(string code, int devIndex, int carrIndex)
+        {
+            bool result = false;
+            string sql = "update Robots set DeviceIndex = " + devIndex + ", CarrierIndex = " + carrIndex + " where Code = '" + code + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                result = true;
+            }
+            return result;
+        }
+
+        public bool SetRobotArmStatus(string code, int state)
+        {
+            bool result = false;
+            string sql = "update Robots set Arm = " + state + " where Code = '" + code + "'";
+            try
+            {
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    com.ExecuteNonQuery();
+                    com.Dispose();
+                    result = true;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return result;
+        }
+
+        public bool SendRobotForCarrier(string carrCode, int coord, out string robotCode)
+        {
+            bool result = false;
+            robotCode = null;
+            try
+            {
+                string sql = "select Robot_" + coord + " from Carriers where Robot_" + coord + " <> '' and Robot_" + coord + " <> null and Code = '" + carrCode + "'";
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object rob = com.ExecuteScalar();
+                    com.Dispose();
+                    if (rob != null)
+                    {
+                        robotCode = rob.ToString();
+                    }
+                    else
+                    {
+                        sql = "select top 1 Code from robots where Status = " + RobotStatus.Standby + " and Battery > " + Robot.LOW_POWER + " and Buffer1 = 0 order by Battery desc";
+                        com = new SqlCommand(sql, CONN);
+                        rob = com.ExecuteScalar();
+                        com.Dispose();
+                        if (rob != null)
+                        {
+                            robotCode = rob.ToString();
+                            sql = "update Carriers set Robot_" + coord + " = '" + robotCode + "' where Code = '" + carrCode + "'";
+                            com = new SqlCommand(sql, CONN);
+                            com.ExecuteNonQuery();
+                            sql = "select top 1 TargetDeviceIndex from Materials where CarrierCode = '" + carrCode + "' ";
+                            if (coord == 1)
+                            {
+                                sql += "and CarrierIndex = 18";
+                            }
+                            else if (coord == 2)
+                            {
+                                sql += "and CarrierIndex = 0";
+                            }
+                            rob = com.ExecuteScalar();
+                            com.Dispose();
+                            if (rob != null)
+                            {
+                                int deviceIndex = Convert.ToInt32(rob);
+                                int carrierIndex = coord == 1 ? 18 : 0;
+                                sql = "update Robots set Status = " + RobotStatus.Moving + ", Coordination = " + coord + ", CarrierIndex = " + carrierIndex + 
+                                    ", DeviceIndex = " + deviceIndex + ", Process = 0 where Code = '" + robotCode + "'";
+                                com = new SqlCommand(sql, CONN);
+                                com.ExecuteNonQuery();
+                                result = true;
+                            }
+                        }
+                        else
+                        {
+                            robotCode = string.Empty;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                robotCode = null;
+            }
+            return result;
+        }
+
+        public int GetRobotTargetPosition(string robotCode, int coord)
+        {
+            int position = -1;
+            try
+            {
+                string sql = "select top 1 TargetPosition from Carriers where Robot_" + coord + " = '" + robotCode + "'";
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object pos = com.ExecuteScalar();
+                    com.Dispose();
+                    if (pos != null)
+                    {
+                        position = Convert.ToInt32(pos) + 1;
+                    }
+                    else
+                    {
+                        position = -1;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                position = -1;
+            }
+            return position;
+        }
+
+        public bool SavePawPosition(string robotCode, string name, RobotPoint pos)
+        {
+            bool result = false;
+            string sql = "select count(*) from robotpoints where Code = '" + robotCode + "' and PtName = '" + name + "'";
+            try
+            {
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object count = com.ExecuteScalar();
+                    com.Dispose();
+                    if (count != null)
+                    {
+                        if (Convert.ToInt32(count) > 0)
+                        {
+                            sql = "update RobotPoints set J1 = 0, J2 = 0, J3 = 0, J4 = 0, J5 = 0, J6 = 0, X = 0, Y = 0, Z = 0, RX = 0, RY = 0, RZ = 0 where Code = '' and PtName = ''";
+                        }
+                        else
+                        {
+                            sql = "insert into RobotPoints(Code, PtName, J1, J2, J3, J4, J5, J6, X, Y, Z, RX, RY, RZ) values('','',0,0,0,0,0,0,0,0,0,0,0,0)";
+                        }
+                    }
+                    result = true;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return result;
         }
         #endregion
         #region Materials
@@ -745,6 +1064,91 @@ namespace AgvDispatchor
             }
             catch (Exception)
             {
+            }
+            return res;
+        }
+
+        public int GetFirstMaterialOnCarrier(string robotCode, out string carrCode, out int targetCode, out int targetArea, out int targetIndex)
+        {
+            int carrierIndex = -1;
+            targetCode = targetArea = targetIndex = -1;
+            carrCode = null;
+            string sql = "select Coordination from robots where Code = '" + robotCode + "'";
+            try
+            {
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object coord = com.ExecuteScalar();
+                    com.Dispose();
+                    if (coord != null)
+                    {
+                        sql = "select CarrierCode,CarrierIndex,TargetDeviceCode,TargetDeviceArea,TargetDeviceIndex from Materials where CarrierCode = (select Code from Carriers where Robot_"
+                            + coord + " = '" + robotCode + "') and Status = " + (int)MaterialStatus.Carrier;
+                        com = new SqlCommand(sql, CONN);
+                        SqlDataReader reader = com.ExecuteReader();
+                        if (reader != null && reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                carrCode = reader["CarrierCode"].ToString();
+                                carrierIndex = Convert.ToInt32(reader["CarrierIndex"]);
+                                targetCode = Convert.ToInt32(reader["TargetDeviceCode"]);
+                                targetArea = Convert.ToInt32(reader["TargetDeviceArea"]);
+                                targetIndex = Convert.ToInt32(reader["TargetDeviceIndex"]);
+                                break;
+                            }
+                        }
+                        reader.Close();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return carrierIndex;
+        }
+
+        public bool ReassignMaterials(int oldDevCode, int oldDevArea, int oldDevIndex, string carrCode, int carrIndex)
+        {
+            bool res = false;
+            string sql = "update Requests set RequestCode = 0, Status = 2, LastResponseTime = GETDATE() where DeviceCode = " 
+                + oldDevCode + " and DeviceArea = " + oldDevArea + " and DeviceIndex = " + oldDevIndex;
+            try
+            {
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    com.ExecuteNonQuery();
+                    com.Dispose();
+                    sql = "select top 1 * from Requests where RequestCode = 1 and Status <> 2 order by DeviceCode asc, DeviceArea asc, DeviceIndex asc";
+                    com = new SqlCommand(sql, CONN);
+                    SqlDataReader reader = com.ExecuteReader();
+                    int devCode = -1, devArea = -1, devIndex = -1;
+                    if (reader != null && reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            devCode = Convert.ToInt32(reader["DeviceCode"]);
+                            devArea = Convert.ToInt32(reader["DeviceArea"]);
+                            devIndex = Convert.ToInt32(reader["DeviceIndex"]);
+                        }
+                    }
+                    reader.Close();
+                    if (devCode != -1 && devArea != -1 && devIndex != -1)
+                    {
+                        sql = "update Materials set TargetDeviceCode = " + devCode + ", TargetDeviceArea = " + devArea + ", TargetDeviceIndex = " + devIndex +
+                            " where CarrierCode = '" + carrCode + "' and CarrierIndex = " + carrIndex + " and Status = " + (int)MaterialStatus.Carrier + " and Staff = 2";
+                        com = new SqlCommand(sql, CONN);
+                        com.ExecuteNonQuery();
+                        com.Dispose();
+                        res = true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                res = false;
             }
             return res;
         }

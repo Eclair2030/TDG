@@ -18,14 +18,15 @@ namespace AgvDispatchor
             MOVE_URL = "http://192.168.30.101:8088/api/v2/orders";
             INFO_URL = "http://192.168.30.101:8088/api/v2/vehicles/";
             SYS_STATE_NAME = "sys_state";
+            SYS_STATION_NAME = "curr_station_id";
             Message = sm;
-            MAP_ID = 12;
+            MAP_ID = 14;
         }
 
-        public FmsActionResult AgvMove(string carrierCode, int position)
+        public FmsActionResult AgvMove(string agvCode, int position)
         {
             FmsActionResult result = FmsActionResult.Default;
-            string resquest = MakeCarrierMoveRequestPostBody(carrierCode, position);
+            string resquest = MakeCarrierMoveRequestPostBody(agvCode, position);
             Stream resStream = ReceivePostResponseStream(resquest, MOVE_URL);
             if (resStream != null)
             {
@@ -38,15 +39,22 @@ namespace AgvDispatchor
             return result;
         }
 
-        public string GetAgvInfo(string carrierCode)
+        public string GetAgvInfo(string agvCode)
         {
             //return GetAgvInfoByName(GetResponse(carrierCode, INFO_URL), SYS_STATE_NAME);
-            return GetResponse(carrierCode, INFO_URL);
+            return GetResponse(agvCode, INFO_URL);
         }
 
-        private string MakeCarrierMoveRequestPostBody(string carrierCode, int dest)
+        public int GetAgvStation(string agvCode)
         {
-            string requestString = "{\"appoint_vehicle_id\" : " + carrierCode + "," +
+            int pos = -1;
+            int.TryParse(GetAgvInfoByName(GetResponse(agvCode, INFO_URL), SYS_STATION_NAME), out pos);
+            return pos;
+        }
+
+        private string MakeCarrierMoveRequestPostBody(string agvCode, int dest)
+        {
+            string requestString = "{\"appoint_vehicle_id\" : " + agvCode + "," +
                 "\"mission\" : [ {" +
                 "\"type\" : \"move\",\"destination\" : " + dest + ",\"map_id\" : " + MAP_ID + "," +
                 "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 0,\"action_param2\" : 0 } ]," +
@@ -141,7 +149,7 @@ namespace AgvDispatchor
             return status;
         }
 
-        private string CONTENT_TYPE, USER_AGENT, TOKEN, MOVE_URL, INFO_URL, SYS_STATE_NAME;
+        private string CONTENT_TYPE, USER_AGENT, TOKEN, MOVE_URL, INFO_URL, SYS_STATE_NAME, SYS_STATION_NAME;
         private int MAP_ID;
         public SendMessage Message;
     }

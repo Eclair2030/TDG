@@ -38,6 +38,7 @@ namespace AgvDispatchor
 
         public static List<Lifter> LIFTERS;                       //升降机列表
         List<Carrier> CARRIES;                                      //搬送车列表
+        List<Robot> ROBOTS;                                         //作业车列表
         public static List<Battery> BATTERYS;           //充电桩列表
 
         bool CARRIER_CIRCLE, ROBOT_CIRCLE, FIXED_CIRCLE;
@@ -69,10 +70,10 @@ namespace AgvDispatchor
             IO = new StoreIO();
             FMS = new FmsAction(ShowCallbackMessage);
 
-            TH_FIXED = new Thread(FixedAction);
-            TH_FIXED.Start();
-            TH_CARRIER = new Thread(AllCarrierAction);
-            TH_CARRIER.Start();
+            //TH_FIXED = new Thread(FixedAction);
+            //TH_FIXED.Start();
+            //TH_CARRIER = new Thread(AllCarrierAction);
+            //TH_CARRIER.Start();
             TH_ROBOT = new Thread(AllRobotAction);
             TH_ROBOT.Start();
         }
@@ -200,6 +201,14 @@ namespace AgvDispatchor
             DbAccess DB = new DbAccess();
             if (DB.Open())
             {
+                ROBOTS = DB.GetAllRobots();
+                for (int i = 0; i < ROBOTS.Count; i++)
+                {
+                    ROBOTS[i].Message = ShowCallbackMessage;
+                    if (!ROBOTS[i].Init())
+                    {
+                    }
+                }
                 while (ROBOT_CIRCLE)
                 {
                     try
@@ -208,15 +217,14 @@ namespace AgvDispatchor
                         {
                             lvRobots.Items.Clear();
                         }));
-                        List<Robot> robots = DB.GetAllRobots();
-                        if (robots != null)
+                        if (DB.RefreshAllRobots(ref ROBOTS) && ROBOTS != null)
                         {
-                            for (int i = 0; i < robots.Count; i++)
+                            for (int i = 0; i < ROBOTS.Count; i++)
                             {
                                 Dispatcher.Invoke(new Action(() =>
                                 {
                                     ListViewItem item = new ListViewItem();
-                                    item.Content = robots[i];
+                                    item.Content = ROBOTS[i];
                                     lvRobots.Items.Add(item);
                                 }));
                             }
@@ -474,6 +482,33 @@ namespace AgvDispatchor
                     {
                         labSelectRobotCode.Content = "Robot Code:" + SELECT_ROBOT_CODE;
                     }));
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                        {
+                            RobotPoint pos = ROBOTS[i].ReadActPos();
+                            if (pos != null)
+                            {
+                                Dispatcher.Invoke(new Action(() =>
+                                {
+                                    labXpos.Content = pos.X.ToString();
+                                    labYpos.Content = pos.Y.ToString();
+                                    labZpos.Content = pos.Z.ToString();
+                                    labRXpos.Content = pos.RX.ToString();
+                                    labRYpos.Content = pos.RY.ToString();
+                                    labRZpos.Content = pos.RZ.ToString();
+                                    labJ1.Content = pos.J1.ToString();
+                                    labJ2.Content = pos.J2.ToString();
+                                    labJ3.Content = pos.J3.ToString();
+                                    labJ4.Content = pos.J4.ToString();
+                                    labJ5.Content = pos.J5.ToString();
+                                    labJ6.Content = pos.J6.ToString();
+                                }));
+                            }
+                            slSpeed.Value = Convert.ToDouble(ROBOTS[i].ReadOverride()) * 100;
+                            break;
+                        }
+                    }
                 }
                 catch (Exception)
                 {
@@ -517,6 +552,196 @@ namespace AgvDispatchor
             RefreshRobotDetails();
         }
 
+        private void btnReset_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    ROBOTS[0].Reset();
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnPCS_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    double x = Convert.ToDouble(tbxXpos.Text.Trim());
+                    double y = Convert.ToDouble(tbxYpos.Text.Trim());
+                    double z = Convert.ToDouble(tbxZpos.Text.Trim());
+                    double rx = Convert.ToDouble(tbxRXpos.Text.Trim());
+                    double ry = Convert.ToDouble(tbxRYpos.Text.Trim());
+                    double rz = Convert.ToDouble(tbxRZpos.Text.Trim());
+                    ROBOTS[0].PCS2ACS(x, y, z, rx, ry, rz);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnGoL_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    double x = Convert.ToDouble(tbxXpos.Text.Trim());
+                    double y = Convert.ToDouble(tbxYpos.Text.Trim());
+                    double z = Convert.ToDouble(tbxZpos.Text.Trim());
+                    double rx = Convert.ToDouble(tbxRXpos.Text.Trim());
+                    double ry = Convert.ToDouble(tbxRYpos.Text.Trim());
+                    double rz = Convert.ToDouble(tbxRZpos.Text.Trim());
+                    ROBOTS[0].MoveL(x, y, z, rx, ry, rz);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnGoJ_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    double j1 = Convert.ToDouble(tbxJ1.Text.Trim());
+                    double j2 = Convert.ToDouble(tbxJ2.Text.Trim());
+                    double j3 = Convert.ToDouble(tbxJ3.Text.Trim());
+                    double j4 = Convert.ToDouble(tbxJ4.Text.Trim());
+                    double j5 = Convert.ToDouble(tbxJ5.Text.Trim());
+                    double j6 = Convert.ToDouble(tbxJ6.Text.Trim());
+                    ROBOTS[0].MoveJ(j1, j2, j3, j4, j5, j6);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnSave_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                        {
+                            if (ROBOTS[i].SetTCPByName(tbxPosName.Text.Trim()))
+                            {
+
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnStatus_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                        {
+                            ShowCallbackMessage("Robot: " + ROBOTS[i].Code + " status: " + ROBOTS[i].ReadCurFSM(), MessageType.Default);
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void slSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                        {
+                            if (ROBOTS[i].SetOverride(slSpeed.Value / 100))
+                            {
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
+        private void btnCopy_Click(object sender, RoutedEventArgs e)
+        {
+            tbxJ1.Text = labJ1.Content.ToString();
+            tbxJ2.Text = labJ2.Content.ToString();
+            tbxJ3.Text = labJ3.Content.ToString();
+            tbxJ4.Text = labJ4.Content.ToString();
+            tbxJ5.Text = labJ5.Content.ToString();
+            tbxJ6.Text = labJ6.Content.ToString();
+            tbxXpos.Text = labXpos.Content.ToString();
+            tbxYpos.Text = labYpos.Content.ToString();
+            tbxZpos.Text = labZpos.Content.ToString();
+            tbxRXpos.Text = labRXpos.Content.ToString();
+            tbxRYpos.Text = labRYpos.Content.ToString();
+            tbxRZpos.Text = labRZpos.Content.ToString();
+        }
+
+        private void btnOrig_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null && ROBOTS.Count > 0)
+                {
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                        {
+                            if (ROBOTS[i].ReadTCPByName(tbxPosName.Text.Trim()))
+                            {
+
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCallbackMessage(ex.Message, MessageType.Exception);
+            }
+        }
+
         private void btnTurn_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -539,19 +764,19 @@ namespace AgvDispatchor
 
         private void btnTest_Click(object sender, RoutedEventArgs e)
         {
-            if (FMS.AgvMove("8", (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
-            {
-                ShowCallbackMessage("Carrier start to transport success.", MessageType.Result);
-            }
-            else
-            {
-                ShowCallbackMessage("Carrier start to transport fail", MessageType.Error);
-            }
+            //if (FMS.AgvMove("8", (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+            //{
+            //    ShowCallbackMessage("Carrier start to transport success.", MessageType.Result);
+            //}
+            //else
+            //{
+            //    ShowCallbackMessage("Carrier start to transport fail", MessageType.Error);
+            //}
 
             string requestString = "{\"appoint_vehicle_id\" : 8," +
                 "\"mission\" : [ {" +
-                "\"type\" : \"move\",\"destination\" : " + (int)FmsCarrierPosition.SupplyLifter + ",\"map_id\" : 12," +
-                "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 1,\"action_param2\" : 1 } ]," +
+                "\"type\" : \"move\",\"destination\" : 1,\"map_id\" : 14," +
+                "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 0,\"action_param2\" : 0 } ]," +
                 "\"priority\" : 0,\"user_id\" : 1}";
             Stream resStream = null;
             byte[] body = Encoding.UTF8.GetBytes(requestString);
@@ -589,7 +814,7 @@ namespace AgvDispatchor
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
-
+            
         }
     }
 }

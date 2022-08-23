@@ -109,13 +109,27 @@ namespace AgvDispatchor
                                         Message("Carrier: " + Code + " get target position fail", MessageType.Error);
                                         break;
                                     }
-
-                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                    int cur = fms.GetAgvStation(Code);
+                                    if (cur != -1 && cur != pos)
                                     {
-                                    }
-                                    else
-                                    {
-                                        Message("Carrier: " + Code + " transport to " + pos + " fail", MessageType.Error);
+                                        if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                        {
+                                            if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
+                                            {
+                                                string robCode;
+                                                if (Db.SendRobotForCarrier(Code, 1, out robCode))
+                                                {
+                                                }
+                                                else
+                                                {
+                                                    Message("Send robot_1 for carrier: " + Code + "  fail", MessageType.Error);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Message("Carrier: " + Code + " transport to " + pos + " fail", MessageType.Error);
+                                        }
                                     }
                                 }
                                 else
@@ -149,13 +163,27 @@ namespace AgvDispatchor
                                     Message("Carrier: " + Code + " get target position fail", MessageType.Error);
                                     break;
                                 }
-
-                                if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                int cur = fms.GetAgvStation(Code);
+                                if (cur != -1 && cur != pos)
                                 {
-                                }
-                                else
-                                {
-                                    Message("Carrier: " + Code + " transport to " + FmsCarrierPosition.Dev1 + " fail", MessageType.Error);
+                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                    {
+                                        if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
+                                        {
+                                            string robCode;
+                                            if (Db.SendRobotForCarrier(Code, 1, out robCode))
+                                            {
+                                            }
+                                            else
+                                            {
+                                                Message("Send robot_1 for carrier: " + Code + "  fail", MessageType.Error);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Message("Carrier: " + Code + " transport to " + pos + " fail", MessageType.Error);
+                                    }
                                 }
                             }
                         }

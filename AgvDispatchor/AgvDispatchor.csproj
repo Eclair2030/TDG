@@ -64,6 +64,12 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="uEyeDotNet">
+      <HintPath>..\..\..\Program Files\IDS\uEyeNew\interfaces\dotnet\uEyeDotNet.dll</HintPath>
+    </Reference>
+    <Reference Include="uEyeDotNetFramework">
+      <HintPath>..\..\..\Program Files\IDS\uEyeNew\interfaces\dotnet\uEyeDotNetFramework.dll</HintPath>
+    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -85,6 +91,7 @@
     <Compile Include="Robot.cs" />
     <Compile Include="RobotPoint.cs" />
     <Compile Include="StoreIO.cs" />
+    <Compile Include="VisionCamera.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

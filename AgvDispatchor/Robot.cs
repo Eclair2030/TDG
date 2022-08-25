@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace AgvDispatchor
 {
     internal class Robot
@@ -14,6 +15,7 @@ namespace AgvDispatchor
         public Robot()
         {
             Paw = null;
+            Cam = null;
         }
 
         public string Code { get; set; }
@@ -31,6 +33,7 @@ namespace AgvDispatchor
         public List<RobotPoint> Points { get; set; }
 
         public Socket Paw;
+        public VisionCamera Cam;
 
         public static float LOW_POWER = 15f;
         public static float HIGH_POWER = 95f;
@@ -139,23 +142,38 @@ namespace AgvDispatchor
                             {
                                 case 0:     //抓取Carrier物料
 
-                                    if (Db.SetRobotArmStatus(robot.Code, 2))
+                                    if (Db.AssignMaterialsToRobot(carrCode, carrIndex, robot.Code))
                                     {
+                                        if (Db.SetRobotArmStatus(robot.Code, 2))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
+                                        }
                                     }
                                     else
                                     {
-                                        Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
+                                        Message("Assign material from carrier: " + carrCode + " to robot: " + robot.Code + " fail", MessageType.Error);
                                     }
                                     break;
                                 case 1:     //抓取设备空料
 
-                                    if (Db.SetRobotArmStatus(robot.Code, 1))
+                                    if (Db.UnloadEmptyMaterialsFromDevice(tarCode, tarArea, tarIndex))
                                     {
+                                        if (Db.SetRobotArmStatus(robot.Code, 1))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
+                                        }
                                     }
                                     else
                                     {
-                                        Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
+                                        Message("Unload empty material from deivce: " + tarCode + " area: " + tarArea + " index: " + tarIndex + " fail", MessageType.Error);
                                     }
+                                    
                                     break;
                                 case 2:     //信息冲突，修改Carrier物料目标位置
                                     if (Db.ReassignMaterials(tarCode, tarArea, tarIndex, carrCode, carrIndex))
@@ -173,142 +191,75 @@ namespace AgvDispatchor
                         }
                         else
                         {
-                            //回收Buffer后结束
-                        }
-                        break;
-                    case 1: //空料
-                        break;
-                    case 2: //满料
-                        break;
-                    default:
-                        break;
-                }
-            }
+                            if (robot.Buffer1 != 0)
+                            {
+                                //回收Buffer后结束
+                            }
 
-
-            if (rp == RobotProcess.None)
-            {
-            }
-            else
-            {
-                switch (robot.Arm)
-                {
-                    case 0:     //无料
-                        switch (st)
-                        {
-                            case RobotStatus.DeviceWork:
-                                if (robot.MovetoBasePosition(RobotBasePosition.DeviceSnap))
+                            if (Db.SetRobotStatus(robot.Code, RobotStatus.Idle))
+                            {
+                                if (Db.SetCarrierStatus(carrCode, CarrierStatus.Transport))
                                 {
-                                    if (robot.MoveOffset(RobotAxis.Z, robot.DeviceIndex % Material.TOTAL_MATERIAL_ONE_POSITION))
-                                    {
-                                        if (true)//拍照成功
-                                        {
-                                            if (true)//视觉检测有料
-                                            {
-                                                if (robot.MovetoBasePosition(RobotBasePosition.DeviceWork)) //带视觉补正数据的位置
-                                                {
-                                                    if (true)   //卡爪抓取产品
-                                                    {
-                                                        if (Db.SetRobotStatus(robot.Code, RobotStatus.DeviceFinish))
-                                                        {
-                                                        }
-                                                        else
-                                                        {
-                                                            Message("robot: " + robot.Code + " status set to DeviceFinish fail", MessageType.Error);
-                                                        }
-                                                        if (robot.MovetoBasePosition(RobotBasePosition.DeviceWait))
-                                                        {
-                                                            if (Db.SetRobotStatus(robot.Code, RobotStatus.BufferWork))
-                                                            {
-                                                            }
-                                                            else
-                                                            {
-                                                                Message("robot: " + robot.Code + " status set to BufferWork fail", MessageType.Error);
-                                                            }
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        Message("robot: " + robot.Code + " catch empty on device fail", MessageType.Error);
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                //空杆
-                                                if (Db.SetRobotStatusAndProcess(robot.Code, RobotStatus.CarrierWork, (int)RobotProcess.Carrier2Device))
-                                                {
-                                                }
-                                                else
-                                                {
-                                                    Message("robot: " + robot.Code + " status set to SnapCarrier fail", MessageType.Error);
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            Message("robot: " + robot.Code + " camera snap fail", MessageType.Error);
-                                        }
-                                    }
-                                }
-                                break;
-                            case RobotStatus.DeviceFinish:
-                                if (robot.DeviceIndex == Material.TOTAL_MATERIAL_ONE_POSITION - 1)
-                                {
-
                                 }
                                 else
                                 {
-
+                                    Message("Set carrier: " + carrCode + " status to Transport error", MessageType.Error);
                                 }
-                                break;
-                            case RobotStatus.CarrierWork:
-                                break;
-                            case RobotStatus.CarrierFinish:
-                                break;
-                            case RobotStatus.BufferWork:
-                                break;
-                            case RobotStatus.BufferFinish:
-                                break;
-                            default:
-                                Message("robot: " + robot.Code + " process code error when null catch", MessageType.Error);
-                                break;
+                            }
+                            else
+                            {
+                                Message("Set robot: " + robot.Code + " status to Idle error", MessageType.Error);
+                            }
                         }
                         break;
-                    case 1:     //空料
-                        switch (rp)
+                    case 1: //空料
+                        int pos = Db.GetFirstNullStaffOnCarrier(robot.Code, robot.Coordination);
+                        if (pos != -1)
                         {
-                            case RobotProcess.Device2Carrier:
-                            case RobotProcess.Buffer2Carrier:
-                                break;
-                            case RobotProcess.Device2Buffer:
-                                break;
-                            default:
-                                Message("robot: " + robot.Code + " process code error when empty catch", MessageType.Error);
-                                break;
-                        }
-                        break;
-                    case 2:     //满料
-                        if (rp == RobotProcess.Carrier2Device)
-                        {
-
+                            //Carrier有空杆，直接将空料放到Carrier的空杆上
                         }
                         else
                         {
-                            Message("robot: " + robot.Code + " process code error when full catch", MessageType.Error);
+                            if (robot.Buffer1 == 0) //Carrier没有空杆，判断Buffer
+                            {
+                                //Buffer为空，把料放到Buffer上
+                            }
+                            else
+                            {
+                                Message("Set robot: " + robot.Code + " buffer is employ, but there is no empty staff on carrier", MessageType.Error);   //Buffer不为空，报警
+                            }
+                        }
+                        break;
+                    case 2: //满料
+                        int tCode, tArea, tIndex;
+                        if (Db.GetMaterialTargetOnRobot(robot.Code, out tCode, out tArea, out tIndex))
+                        {
+                            //放料到设备
+                            if (Db.AssignMaterialsToDevice(robot.Code, tCode, tArea, tIndex))
+                            {
+                            }
+                            else
+                            {
+                                Message("Assign material from robot: " + robot.Code + " to device fail", MessageType.Error);
+                            }
+                        }
+                        else
+                        {
+                            Message("Set robot: " + robot.Code + " get material target position fail", MessageType.Error);
                         }
                         break;
                     default:
+                        Message("Set robot: " + robot.Code + " Arm status error", MessageType.Error);
                         break;
                 }
-            }            
+            }
         }
 
         /// <summary>
         /// 机械手上电+使能
         /// </summary>
         /// <returns></returns>
-        public bool Init()
+        public bool ArmInit()
         {
             bool result = false;
             try
@@ -321,6 +272,7 @@ namespace AgvDispatchor
                 }
                 if (!Paw.Connected)
                 {
+                    Message("Start to connect to Paw on robot: " + Code, MessageType.Default);
                     Paw.Connect(ep);
                 }
                 if (Paw != null && Paw.Connected)
@@ -349,9 +301,11 @@ namespace AgvDispatchor
                     }
                     else
                     {
-                        while (ReadCurFSM() != ((int)CurFsmState.Disable).ToString())
+                        int loop = 0;
+                        while (ReadCurFSM() != ((int)CurFsmState.Disable).ToString() && loop < 20)
                         {
                             Thread.Sleep(500);
+                            loop++;
                         }
                         if (Powon())
                         {
@@ -377,136 +331,33 @@ namespace AgvDispatchor
             return result;
         }
 
-        private bool MovetoBasePosition(RobotBasePosition pos)
+        public bool CameraInit(RenderImage RendImg)
         {
             bool result = false;
             try
             {
-                if (Paw != null && Paw.Connected)
+                Cam = new VisionCamera(RendImg);
+                Message("Start to connect to Camera on robot: " + Code, MessageType.Default);
+                if (Cam.CameraInit())
                 {
-                    RobotPoint rp = new RobotPoint();
-                    for (int i = 0; i < Points.Count; i++)
-                    {
-                        if (Points[i].PtName == pos.ToString())
-                        {
-                            rp = Points[i];
-                            break;
-                        }
-                    }
-                    string msg = "MoveJ,0," + rp.J1 + ", " + rp.J2 + "," + rp.J3 + "," + rp.J4 + "," + rp.J5 + "," + rp.J6 + ",;";
-                    Paw.Send(Encoding.ASCII.GetBytes(msg));
-                    byte[] data = new byte[Paw.ReceiveBufferSize];
-                    Paw.Receive(data);
-                    if (Encoding.ASCII.GetString(data).Contains("OK"))
-                    {
-                        msg = "ReadRobotState,0,;";
-                        string state;
-                        do
-                        {
-                            Paw.Send(Encoding.ASCII.GetBytes(msg));
-                            data = new byte[Paw.ReceiveBufferSize];
-                            Paw.Receive(data);
-                            state = Encoding.ASCII.GetString(data);
-                            state = state.Substring(state.IndexOf("movingState")+12, 1);
-                            Thread.Sleep(300);
-                        } while (state == "1");
-                        Message("Robot: " + Code + " reach the base point " + pos, MessageType.Result);
-                        result = true;
-                    }
-                    else
-                    {
-                        Message("Robot: " + Code + " move to base point " + pos + " fail", MessageType.Error);
-                    }
+                    Message("Camera on robot: " + Code + " init success", MessageType.Result);
                 }
                 else
                 {
-                    Init();
+                    Message("Camera on robot: " + Code + " init fail", MessageType.Error);
                 }
             }
             catch (Exception)
             {
+                Message("Robot: " + Code + " camera init fail", MessageType.Error);
+                result = false;
             }
             return result;
         }
 
-        private bool MoveOffset(RobotAxis axis, double distance)
+        public void CameraClose()
         {
-            bool result = false;
-            try
-            {
-                if (Paw != null && Paw.Connected)
-                {
-                    string msg = "ReadActPos,0,;";
-                    Paw.Send(Encoding.ASCII.GetBytes(msg));
-                    byte[] data = new byte[Paw.ReceiveBufferSize];
-                    Paw.Receive(data);
-                    string[] msgArry = Encoding.ASCII.GetString(data).Split(',');
-                    if (msgArry[1] == "OK")
-                    {
-                        double x = Convert.ToDouble(msgArry[8]);
-                        double y = Convert.ToDouble(msgArry[9]);
-                        double z = Convert.ToDouble(msgArry[10]);
-                        double rx = Convert.ToDouble(msgArry[11]);
-                        double ry = Convert.ToDouble(msgArry[12]);
-                        double rz = Convert.ToDouble(msgArry[13]);
-                        switch (axis)
-                        {
-                            case RobotAxis.X:
-                                x += distance;
-                                break;
-                            case RobotAxis.Y:
-                                y += distance;
-                                break;
-                            case RobotAxis.Z:
-                                z += distance;
-                                break;
-                            case RobotAxis.RX:
-                            case RobotAxis.RY:
-                            case RobotAxis.RZ:
-                            default:
-                                Message("Robot: " + Code + " Paw move offset axis parameter error", MessageType.Error);
-                                break;
-                        }
-                        msg = "MoveL,rbtID," + x + "," + y + "," + z + "," + rx + "," + ry + "," + rz + ",;";
-                        Paw.Send(Encoding.ASCII.GetBytes(msg));
-                        data = new byte[Paw.ReceiveBufferSize];
-                        Paw.Receive(data);
-                        if (Encoding.ASCII.GetString(data).Contains("OK"))
-                        {
-                            msg = "ReadRobotState,0,;";
-                            string state;
-                            do
-                            {
-                                Paw.Send(Encoding.ASCII.GetBytes(msg));
-                                data = new byte[Paw.ReceiveBufferSize];
-                                Paw.Receive(data);
-                                state = Encoding.ASCII.GetString(data);
-                                state = state.Substring(state.IndexOf("movingState") + 12, 1);
-                                Thread.Sleep(300);
-                            } while (state == "1");
-                            Message("Robot: " + Code + " axis: " + axis + " move offset " + distance, MessageType.Result);
-                            result = true;
-                        }
-                        else
-                        {
-                            Message("Robot: " + Code + " Paw MoveL fail", MessageType.Error);
-                        }
-                    }
-                    else
-                    {
-                        Message("Robot: " + Code + " Paw ReadActPos fail", MessageType.Error);
-                    }
-                }
-                else
-                {
-                    Init();
-                }
-            }
-            catch (Exception)
-            {
-            }
-
-            return result;
+            Cam.CameraClose();
         }
 
         public bool MoveL(double x, double y, double z, double rx, double ry, double rz)
@@ -532,7 +383,7 @@ namespace AgvDispatchor
                 }
                 else
                 {
-                    Init();
+                    ArmInit();
                 }
             }
             catch (Exception)
@@ -565,7 +416,7 @@ namespace AgvDispatchor
                 }
                 else
                 {
-                    Init();
+                    ArmInit();
                 }
             }
             catch (Exception)
@@ -801,68 +652,6 @@ namespace AgvDispatchor
             return result;
         }
 
-        public bool SetTCPByName(string name)
-        {
-            bool result = false;
-            try
-            {
-                if (Paw != null && Paw.Connected)
-                {
-                    string msg = "SetTCPByName,0," + name + ",;";
-                    Paw.Send(Encoding.ASCII.GetBytes(msg));
-                    byte[] data = new byte[Paw.ReceiveBufferSize];
-                    Paw.Receive(data);
-                    if (Encoding.ASCII.GetString(data).Contains("OK"))
-                    {
-                        Message("Robot: " + Code + " SetTCPByName by " + name + " success", MessageType.Result);
-                        result = true;
-                    }
-                    else
-                    {
-                        Message("Robot: " + Code + " SetTCPByName by " + name + " fail", MessageType.Error);
-                        result = false;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                result = false;
-            }
-            return result;
-        }
-
-        public bool ReadTCPByName(string name)
-        {
-            bool result = false;
-            try
-            {
-                if (Paw != null && Paw.Connected)
-                {
-                    string msg = "ReadPointList,Point_" + name + ",;";
-                    Paw.Send(Encoding.ASCII.GetBytes(msg));
-                    byte[] data = new byte[Paw.ReceiveBufferSize];
-                    Paw.Receive(data);
-                    string str = Encoding.ASCII.GetString(data);
-                    if (Encoding.ASCII.GetString(data).Contains("OK"))
-                    {
-                        Message("Robot: " + Code + " ReadTCPByName by " + name + " success", MessageType.Result);
-                        Message(str, MessageType.Default);
-                        result = true;
-                    }
-                    else
-                    {
-                        Message("Robot: " + Code + " ReadTCPByName by " + name + " fail", MessageType.Error);
-                        result = false;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                result = false;
-            }
-            return result;
-        }
-
         public string PCS2ACS(double x, double y, double z, double rx, double ry, double rz)
         {
             string result = null;
@@ -891,6 +680,8 @@ namespace AgvDispatchor
             }
             return result;
         }
+
+        
     }
 
     public enum RobotStatus

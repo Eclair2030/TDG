@@ -325,7 +325,7 @@ namespace AgvDispatchor
                                         {
                                             if (db.AssignMaterialsToCarrier(lifter.Code, carrCode))     //物料分配到搬送车
                                             {
-                                                if (db.AssignMaterialsOnCarrierToDevice(carrCode))      //更改物料请求表，分配每个物料的目的地
+                                                if (db.AssignMaterialsTargetOnCarrier(carrCode))      //更改物料请求表，分配每个物料的目的地
                                                 {
                                                 }
                                                 else

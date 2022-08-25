@@ -952,7 +952,7 @@ namespace AgvDispatchor
             return res;
         }
 
-        public bool AssignMaterialsOnCarrierToDevice(string carrCode)
+        public bool AssignMaterialsTargetOnCarrier(string carrCode)
         {
             bool res = false;
             try
@@ -1068,6 +1068,60 @@ namespace AgvDispatchor
             return res;
         }
 
+        public bool AssignMaterialsToRobot(string carrCode, int carrIndex, string robotCode)
+        {
+            bool res = false;
+            string sql = "update Materials set Status = " + (int)MaterialStatus.Robot + ", RobotCode = '" + robotCode +
+                "' where CarrierIndex = " + carrIndex + " and CarrierCode = '" + carrCode + "' and Status = " + (int)MaterialStatus.Carrier;
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool AssignMaterialsToDevice(string robotCode, int code, int area, int index)
+        {
+            bool res = false;
+            string sql = "update Materials set Status = " + (int)MaterialStatus.Complete + ", Staff = 2 where RobotCode = '" + 
+                robotCode + "' and Status = " + (int)MaterialStatus.Robot;
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                sql = "update Requests set RequestCode = 0, Status = 2, LastResponseTime = GETDATE() where DeviceCode = " + 
+                    code + " and DeviceArea = " + area + " and DeviceIndex = " + index;
+                com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool UnloadEmptyMaterialsFromDevice(int code, int area, int index)
+        {
+            bool res = false;
+            string sql = "update Materials set Staff = 0 where TargetDeviceCode = " + code + " and TargetDeviceArea = " + 
+                area + " and TargetDeviceIndex = " + index;
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                sql = "update Requests set Status = 0 where DeviceCode = " + code + " and DeviceArea = " + area + " and DeviceIndex = " + index;
+                com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
         public int GetFirstMaterialOnCarrier(string robotCode, out string carrCode, out int targetCode, out int targetArea, out int targetIndex)
         {
             int carrierIndex = -1;
@@ -1151,6 +1205,66 @@ namespace AgvDispatchor
                 res = false;
             }
             return res;
+        }
+
+        public int GetFirstNullStaffOnCarrier(string robotCode, int coordinate)
+        {
+            int pos = -1;
+            try
+            {
+                int min = coordinate == 1 ? 0 : 18;
+                int max = coordinate == 1 ? 17 : 35;
+                string sql = "select top 1 carrierIndex from Materials where CarrierIndex >= " + min + " and CarrierIndex <= " + max +
+                    " and Staff = 0 and CarrierCode = (select Code from Carriers where Robot_" + coordinate + " = '" + robotCode + "') order by CarrierIndex asc";
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object index = com.ExecuteScalar();
+                    com.Dispose();
+                    if (index != null)
+                    {
+                        pos = Convert.ToInt32(index);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                pos = -1;
+            }
+            return pos;
+        }
+
+        public bool GetMaterialTargetOnRobot(string robotCode, out int devCode, out int devArea, out int devIndex)
+        {
+            bool result = false;
+            devCode = devArea = devIndex = -1;
+            try
+            {
+                string sql = "select * from Materials where RobotCode = '" + robotCode + "' and Status = " + (int)MaterialStatus.Robot;
+                if (CONN.State == System.Data.ConnectionState.Open)
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    SqlDataReader reader = com.ExecuteReader();
+                    if (reader != null && reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            devCode = Convert.ToInt32(reader["TargetDeviceCode"]);
+                            devArea = Convert.ToInt32(reader["TargetDeviceArea"]);
+                            devIndex = Convert.ToInt32(reader["TargetDeviceIndex"]);
+                            result = true;
+                            break;
+                        }
+                    }
+                    reader.Close();
+                    com.Dispose();
+                }
+            }
+            catch (Exception)
+            {
+                result = false;
+            }
+            return result;
         }
         #endregion
         #region Charge

@@ -157,7 +157,7 @@ namespace AgvDispatchor
                         {
                             if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
                             {
-                                int pos = Db.GetCarrierTargetPosition(Code);
+                                int pos = Db.GetCarrierTargetPosition(Code);    //获取上料位置时，加入是否已经上料完成的判断，获取不到位置作为上料完成信号
                                 if (pos == -1)
                                 {
                                     Message("Carrier: " + Code + " get target position fail", MessageType.Error);

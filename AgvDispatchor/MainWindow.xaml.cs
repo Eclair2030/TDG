@@ -23,6 +23,7 @@ using System.Windows.Shapes;
 namespace AgvDispatchor
 {
     public delegate void SendMessage(string msg, MessageType mt);
+    public delegate void RenderImage(int width, int height, int dpiX, int dpiY, PixelFormat pf, IntPtr data, int size, int stride);
     /// <summary>
     /// MainWindow.xaml 的交互逻辑
     /// </summary>
@@ -205,7 +206,10 @@ namespace AgvDispatchor
                 for (int i = 0; i < ROBOTS.Count; i++)
                 {
                     ROBOTS[i].Message = ShowCallbackMessage;
-                    if (!ROBOTS[i].Init())
+                    if (!ROBOTS[i].ArmInit())
+                    {
+                    }
+                    if (ROBOTS[i].CameraInit(ShowCameraImage))
                     {
                     }
                 }
@@ -239,6 +243,13 @@ namespace AgvDispatchor
                     {
                     }
                     Thread.Sleep(SLEEP_TIME);
+                }
+                if (ROBOTS != null)
+                {
+                    for (int i = 0; i < ROBOTS.Count; i++)
+                    {
+                        ROBOTS[i].CameraClose();
+                    }
                 }
             }
             else
@@ -522,6 +533,14 @@ namespace AgvDispatchor
 
         }
 
+        private void ShowCameraImage(int width, int height, int dpiX, int dpiY, PixelFormat pf, IntPtr data, int size, int stride)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                imgCamera.Source = BitmapSource.Create(width, height, dpiX, dpiY, pf, null, data, size, stride);
+            });
+        }
+
         private void lvCarriers_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ListViewItem item = (ListViewItem)lvCarriers.SelectedValue;
@@ -632,27 +651,6 @@ namespace AgvDispatchor
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (ROBOTS != null && ROBOTS.Count > 0)
-                {
-                    for (int i = 0; i < ROBOTS.Count; i++)
-                    {
-                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
-                        {
-                            if (ROBOTS[i].SetTCPByName(tbxPosName.Text.Trim()))
-                            {
-
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowCallbackMessage(ex.Message, MessageType.Exception);
-            }
         }
 
         private void btnStatus_Click(object sender, RoutedEventArgs e)
@@ -719,27 +717,6 @@ namespace AgvDispatchor
 
         private void btnOrig_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (ROBOTS != null && ROBOTS.Count > 0)
-                {
-                    for (int i = 0; i < ROBOTS.Count; i++)
-                    {
-                        if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
-                        {
-                            if (ROBOTS[i].ReadTCPByName(tbxPosName.Text.Trim()))
-                            {
-
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowCallbackMessage(ex.Message, MessageType.Exception);
-            }
         }
 
         private void btnTurn_Click(object sender, RoutedEventArgs e)

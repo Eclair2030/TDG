@@ -29,9 +29,9 @@ namespace AgvDispatchor
                 statusRet = Cam.PixelFormat.Set(uEye.Defines.ColorMode.Mono8);
                 if (statusRet == uEye.Defines.Status.Success)
                 {
-                    Cam.Timing.PixelClock.Set(60);
-                    //Cam.Timing.Exposure.Set(300);
-                    //Cam.Timing.Framerate.Set(28);
+                    Cam.Timing.PixelClock.Set(20);
+                    Cam.Timing.Exposure.Set(30);
+                    Cam.Timing.Framerate.Set(50);
                     int x, y;
                     Cam.Size.AOI.Get(out x, out y, out Width, out Height);
 
@@ -136,21 +136,23 @@ namespace AgvDispatchor
             return uEye.Defines.Status.NoSuccess;
         }
 
-        private void GetLastFrame(out int width, out int height, out IntPtr frame)
+        public void GetLastFrame(out int coordX, out int coordY)
         {
             int s32MemID;
-            width = 0;
-            height = 0;
-            frame = IntPtr.Zero;
+            coordX = 0;
+            coordY = 0;
             uEye.Defines.Status statusRet = Cam.Memory.GetLast(out s32MemID);
             if ((uEye.Defines.Status.SUCCESS == statusRet) && (0 < s32MemID))
             {
                 if (uEye.Defines.Status.SUCCESS == Cam.Memory.Lock(s32MemID))
                 {
-                    Cam.Memory.GetWidth(s32MemID, out width);
-                    Cam.Memory.GetHeight(s32MemID, out height);
+                    int w, h;
+                    IntPtr frame;
+                    Cam.Memory.GetWidth(s32MemID, out w);
+                    Cam.Memory.GetHeight(s32MemID, out h);
                     Cam.Memory.GetLast(out frame);
                     Cam.Memory.Unlock(s32MemID);
+                    DLL.FindStaff(null, out coordX, out coordY, w, h, frame);
                 }
             }
         }

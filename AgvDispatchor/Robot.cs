@@ -141,6 +141,9 @@ namespace AgvDispatchor
                             switch (staff)
                             {
                                 case 0:     //抓取Carrier物料
+                                    int w, h;
+                                    IntPtr img;
+                                    //Cam.GetLastFrame(null, out w, out h, out img);
 
                                     if (Db.AssignMaterialsToRobot(carrCode, carrIndex, robot.Code))
                                     {
@@ -417,6 +420,67 @@ namespace AgvDispatchor
                 else
                 {
                     ArmInit();
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return result;
+        }
+
+        public bool LongJogL(int axis, int derection, int state)
+        {
+            bool result = false;
+            try
+            {
+                if (Paw != null && Paw.Connected)
+                {
+                    //LongJogL,rbtID,AxisID,Derection,nState,;
+                    //AxisID (0:X,1:Y,2:Z,3:RX,4:RY,5:RZ)
+                    //Derection 运动方向：0=负向；1=正向
+                    //nState 运动启停：0=停止；1=启动
+                    string msg = "LongJogL,0," + axis + "," + derection + "," + state + ",;";
+                    Paw.Send(Encoding.ASCII.GetBytes(msg));
+                    byte[] data = new byte[Paw.ReceiveBufferSize];
+                    Paw.Receive(data);
+                    if (Encoding.ASCII.GetString(data).Contains("OK"))
+                    {
+                        Message("Robot: " + Code + " Paw LongJogL start", MessageType.Result);
+                        result = true;
+                    }
+                    else
+                    {
+                        Message("Robot: " + Code + " Paw LongJogL fail", MessageType.Error);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return result;
+        }
+
+        public bool LongMoveEvent()
+        {
+            bool result = false;
+            try
+            {
+                if (Paw != null && Paw.Connected)
+                {
+                    string msg = "LongMoveEvent,0,;";
+                    Paw.Send(Encoding.ASCII.GetBytes(msg));
+                    byte[] data = new byte[Paw.ReceiveBufferSize];
+                    Paw.Receive(data);
+                    if (Encoding.ASCII.GetString(data).Contains("OK"))
+                    {
+                        result = true;
+                    }
+                    else
+                    {
+                        Message("Robot: " + Code + " Paw LongMoveEvent fail", MessageType.Error);
+                    }
                 }
             }
             catch (Exception)

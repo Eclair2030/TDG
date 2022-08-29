@@ -42,7 +42,7 @@ namespace AgvDispatchor
         List<Robot> ROBOTS;                                         //作业车列表
         public static List<Battery> BATTERYS;           //充电桩列表
 
-        bool CARRIER_CIRCLE, ROBOT_CIRCLE, FIXED_CIRCLE;
+        bool CARRIER_CIRCLE, ROBOT_CIRCLE, FIXED_CIRCLE, JOG_CIRCLE;
         string SELECT_CARRIER_CODE, SELECT_ROBOT_CODE, SELECT_LIFTER_CODE;
         int SLEEP_TIME;
 
@@ -52,6 +52,7 @@ namespace AgvDispatchor
             LIFTERS = new List<Lifter>();
             CARRIES = new List<Carrier>();
             CARRIER_CIRCLE = ROBOT_CIRCLE = FIXED_CIRCLE = true;
+            JOG_CIRCLE = false;
             SLEEP_TIME = 5000;
         }
 
@@ -60,6 +61,7 @@ namespace AgvDispatchor
             CARRIER_CIRCLE = false;
             ROBOT_CIRCLE = false;
             FIXED_CIRCLE = false;
+            JOG_CIRCLE = false;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -541,6 +543,25 @@ namespace AgvDispatchor
             });
         }
 
+        private void KeepMove()
+        {
+            while (JOG_CIRCLE)
+            {
+                for (int i = 0; i < ROBOTS.Count; i++)
+                {
+                    if (ROBOTS[i].Code == SELECT_ROBOT_CODE)
+                    {
+                        if (ROBOTS[i].LongMoveEvent())
+                        {
+                        }
+                        break;
+                    }
+                }
+                Thread.Sleep(400);
+            }
+            ShowCallbackMessage("stop pressed", MessageType.Default);
+        }
+
         private void lvCarriers_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ListViewItem item = (ListViewItem)lvCarriers.SelectedValue;
@@ -717,6 +738,109 @@ namespace AgvDispatchor
 
         private void btnOrig_Click(object sender, RoutedEventArgs e)
         {
+            for (int i = 0; i < ROBOTS.Count; i++)
+            {
+                int x, y;
+                ROBOTS[i].Cam.GetLastFrame(out x, out y);
+                break;
+            }
+        }
+
+        private void SpaceJog_Down(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 160, 230, 150));
+                int axis = -1, direct = -1, state = 1;
+                switch (lab.Name)
+                {
+                    case "labXplus":
+                        axis = 0;
+                        direct = 1;
+                        break;
+                    case "labXsub":
+                        axis = 0;
+                        direct = 0;
+                        break;
+                    case "labYplus":
+                        axis = 1;
+                        direct = 1;
+                        break;
+                    case "labYsub":
+                        axis = 1;
+                        direct = 0;
+                        break;
+                    case "labZplus":
+                        axis = 2;
+                        direct = 1;
+                        break;
+                    case "labZsub":
+                        axis = 2;
+                        direct = 0;
+                        break;
+                    case "labRXplus":
+                        axis = 3;
+                        direct = 1;
+                        break;
+                    case "labRXsub":
+                        axis = 3;
+                        direct = 0;
+                        break;
+                    case "labRYplus":
+                        axis = 4;
+                        direct = 1;
+                        break;
+                    case "labRYsub":
+                        axis = 4;
+                        direct = 0;
+                        break;
+                    case "labRZplus":
+                        axis = 5;
+                        direct = 1;
+                        break;
+                    case "labRZsub":
+                        axis = 5;
+                        direct = 0;
+                        break;
+                    default:
+                        break;
+                }
+                for (int i = 0; i < ROBOTS.Count; i++)
+                {
+                    if (ROBOTS[i].Code == SELECT_ROBOT_CODE && axis != -1)
+                    {
+                        if (ROBOTS[i].LongJogL(axis, direct, state))
+                        {
+                            ShowCallbackMessage(lab.Name + " start to move space", MessageType.Default);
+                            JOG_CIRCLE = true;
+                            Thread thJog = new Thread(KeepMove);
+                            thJog.Start();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void SpaceJog_Leave(object sender, MouseEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 230, 230, 230));
+                JOG_CIRCLE = false;
+            }
+        }
+
+        private void SpaceJog_Up(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 230, 230, 230));
+                JOG_CIRCLE = false;
+            }
         }
 
         private void btnTurn_Click(object sender, RoutedEventArgs e)

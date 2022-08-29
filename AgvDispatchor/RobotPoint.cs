@@ -56,6 +56,6 @@ namespace AgvDispatchor
         DevWait_0 = 0,              //设备第0个等待位
         DevWait_1 = 1,              //设备第0个等待位
         DevWait_2 = 2,              //设备第0个等待位
-        DevWait_3 = 3,              //设备第0个等待位
+        Dwait_3 = 3,              //设备第0个等待位，和中间位之间的桥梁
     }
 }

@@ -33,7 +33,7 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -83,6 +83,7 @@
     <Compile Include="CarrierInLifterQueue.cs" />
     <Compile Include="ChargeQueue.cs" />
     <Compile Include="DbAccess.cs" />
+    <Compile Include="DLL.cs" />
     <Compile Include="FmsAction.cs" />
     <Compile Include="Lifter.cs" />
     <Compile Include="Material.cs" />

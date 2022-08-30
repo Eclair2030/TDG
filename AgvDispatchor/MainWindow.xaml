@@ -65,11 +65,11 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Batterys" HorizontalAlignment="Left" Margin="919,12,0,0" VerticalAlignment="Top" Width="100" FontSize="14" VerticalContentAlignment="Center"/>
-        <Rectangle x:Name="rtBattery1" HorizontalAlignment="Left" Height="20" Margin="879,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle x:Name="rtBattery2" HorizontalAlignment="Left" Height="20" Margin="919,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle x:Name="rtBattery3" HorizontalAlignment="Left" Height="20" Margin="959,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
-        <Rectangle x:Name="rtBattery4" HorizontalAlignment="Left" Height="20" Margin="999,47,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Label Content="Batterys" HorizontalAlignment="Left" Margin="849,15,0,0" VerticalAlignment="Top" Width="100" FontSize="14" VerticalContentAlignment="Center"/>
+        <Rectangle x:Name="rtBattery1" HorizontalAlignment="Left" Height="20" Margin="809,50,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle x:Name="rtBattery2" HorizontalAlignment="Left" Height="20" Margin="849,50,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle x:Name="rtBattery3" HorizontalAlignment="Left" Height="20" Margin="889,50,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
+        <Rectangle x:Name="rtBattery4" HorizontalAlignment="Left" Height="20" Margin="929,50,0,0" Stroke="Black" VerticalAlignment="Top" Width="20" Fill="Lime"/>
         <Label x:Name="labSelectCarrierCode" Content="Carrier Code:" HorizontalAlignment="Left" Margin="30,315,0,0" VerticalAlignment="Top" Width="359" FontSize="16"/>
         <Label x:Name="labIndex0" Content="1 - 24" HorizontalAlignment="Left" Margin="30,350,0,0" VerticalAlignment="Top" Width="160" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex1" Content="1 - 24" HorizontalAlignment="Left" Margin="30,380,0,0" VerticalAlignment="Top" Width="160" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
@@ -153,34 +153,35 @@
         <Label Content="J1" HorizontalAlignment="Left" Margin="412,500,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ1" Content="0.000" HorizontalAlignment="Left" Margin="447,500,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ1" HorizontalAlignment="Left" Margin="552,500,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,500,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,500,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ1sub" Content="-" HorizontalAlignment="Left" Margin="637,500,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ1plus" Content="+" HorizontalAlignment="Left" Margin="672,500,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Label Content="J2" HorizontalAlignment="Left" Margin="412,530,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ2" Content="0.000" HorizontalAlignment="Left" Margin="447,530,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ2" HorizontalAlignment="Left" Margin="552,530,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,530,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,530,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ2sub" Content="-" HorizontalAlignment="Left" Margin="637,530,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ2plus" Content="+" HorizontalAlignment="Left" Margin="672,530,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Label Content="J3" HorizontalAlignment="Left" Margin="412,560,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ3" Content="0.000" HorizontalAlignment="Left" Margin="447,560,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ3" HorizontalAlignment="Left" Margin="552,560,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,560,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,560,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ3sub" Content="-" HorizontalAlignment="Left" Margin="637,560,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ3plus" Content="+" HorizontalAlignment="Left" Margin="672,560,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Label Content="J4" HorizontalAlignment="Left" Margin="412,590,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ4" Content="0.000" HorizontalAlignment="Left" Margin="447,590,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ4" HorizontalAlignment="Left" Margin="552,590,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,590,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,590,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ4sub" Content="-" HorizontalAlignment="Left" Margin="637,590,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ4plus" Content="+" HorizontalAlignment="Left" Margin="672,590,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Label Content="J5" HorizontalAlignment="Left" Margin="412,620,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ5" Content="0.000" HorizontalAlignment="Left" Margin="447,620,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ5" HorizontalAlignment="Left" Margin="552,620,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,620,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,620,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ5sub" Content="-" HorizontalAlignment="Left" Margin="637,620,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ5plus" Content="+" HorizontalAlignment="Left" Margin="672,620,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Label Content="J6" HorizontalAlignment="Left" Margin="412,650,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6"/>
         <Label x:Name="labJ6" Content="0.000" HorizontalAlignment="Left" Margin="447,650,0,0" VerticalAlignment="Top" Width="100" FontSize="12" BorderThickness="1,1,1,1" BorderBrush="Black"/>
         <TextBox x:Name="tbxJ6" HorizontalAlignment="Left" Margin="552,650,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="80" Height="25" FontSize="16" VerticalContentAlignment="Center"/>
-        <Button Content="-" HorizontalAlignment="Left" Margin="637,650,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
-        <Button Content="+" HorizontalAlignment="Left" Margin="672,650,0,0" VerticalAlignment="Top" Width="30" Height="27" FontSize="18"/>
+        <Label x:Name="labJ6sub" Content="-" HorizontalAlignment="Left" Margin="637,650,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
+        <Label x:Name="labJ6plus" Content="+" HorizontalAlignment="Left" Margin="672,650,0,0" VerticalAlignment="Top" Width="30" FontSize="12" Background="#FFE6E6E6" HorizontalContentAlignment="Center" MouseDown="DegreeJog_Down" MouseUp="DegreeJog_Up" MouseLeave="DegreeJog_Leave"/>
         <Slider x:Name="slSpeed" HorizontalAlignment="Left" Margin="721,624,0,0" VerticalAlignment="Top" Width="200" Maximum="100" ValueChanged="slSpeed_ValueChanged" Minimum="1"/>
+        <Canvas x:Name="cavMark"  HorizontalAlignment="Left" Height="240" Margin="710,651,0,0" VerticalAlignment="Top" Width="320" Panel.ZIndex="1"/>
         <Image x:Name="imgCamera" HorizontalAlignment="Left" Height="240" Margin="710,651,0,0" VerticalAlignment="Top" Width="320"/>
         <Button x:Name="btnGoL" Content="MoveL" HorizontalAlignment="Left" Margin="709,477,0,0" VerticalAlignment="Top" Width="100" Height="40" FontSize="14" Background="#FFB7D3FF" Click="btnGoL_Click"/>
         <Button x:Name="btnGoJ" Content="MoveJ" HorizontalAlignment="Left" Margin="814,477,0,0" VerticalAlignment="Top" Width="100" Height="40" FontSize="14" Background="#FFB7D3FF" Click="btnGoJ_Click"/>
@@ -216,6 +217,7 @@
                 </GridView>
             </ListView.View>
         </ListView>
+        
 
 
 

@@ -18,6 +18,6 @@ namespace AgvDispatchor
         { }
 
         [DllImport("AgvDLL.dll", EntryPoint = "FindStaff", CallingConvention = CallingConvention.StdCall)]
-        public static extern int FindStaff(ShowMessage sm, out int x, out int y, int w, int h, IntPtr data);
+        public static extern int FindStaff(ShowMessage sm, out int x, out int y, out int r, int w, int h, IntPtr data);
     }
 }

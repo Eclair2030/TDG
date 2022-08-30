@@ -14,7 +14,7 @@
 #include <cmath>
 
 using namespace cv;
-using namespace cv::ml;
+//using namespace cv::ml;
 //using namespace std;
 
 void Sign()
@@ -61,64 +61,47 @@ void Sign()
 
 int main(int argc, char** argv)
 {
-	Mat mark = imread("D:\\OLED\\AGV\\Big stone test\\mark.bmp", IMREAD_GRAYSCALE);
-	double sigmaMark = 0;
-	for (size_t i = 0; i < mark.cols; i++)
-	{
-		for (size_t j = 0; j < mark.rows; j++)
-		{
-			sigmaMark += (double)mark.at<uchar>(j, i) * (double)mark.at<uchar>(j, i);
-		}
-	}
+	Mat Pic = imread("D:\\AGV1.bmp", IMREAD_GRAYSCALE);
+	Mat thres;
+	threshold(Pic, thres, 20, 255, THRESH_BINARY);
+	imshow("threshold", thres);
+	//【4】执行形态学开操作去除噪点
+	Mat kernel = getStructuringElement(MORPH_RECT, Size(7, 7), Point(-1, -1));
+	morphologyEx(thres, thres, MORPH_DILATE, kernel, Point(-1, -1), 1);
+	imshow("morphologyEx", thres);
 
-	Mat Pic = imread("D:\\OLED\\AGV\\Big stone test\\middle.jpg", IMREAD_GRAYSCALE);
-	Mat res;
-	matchTemplate(Pic, mark, res, TM_CCOEFF);
-	double min, max;
-	Point maxP;
-	minMaxLoc(res, &min, &max, 0, &maxP);
-	std::cout << "min: " << min << " , max: " << max << std::endl;
-	std::cout << "max point x: " << maxP.x << " , y: " << maxP.y << std::endl;
-	rectangle(Pic, Rect(maxP.x, maxP.y, mark.cols, mark.rows), Scalar(0, 0, 255));
-	imshow("A", Pic);
-	//minMaxLoc(Pic, )
-	/*size_t sigma_x = 0, sigma_y = 0;
-	double sigma_Final = 0;
-	for (size_t i = 0; i < Pic.cols - mark.cols; i++)
-	{
-		for (size_t j = 0; j < Pic.rows - mark.rows; j++)
-		{
-			Rect rect(i, j, mark.cols, mark.rows);
-			Mat sample(Pic, rect);
-			Mat markmaybe(mark.rows, mark.cols, CV_16SC1, Scalar(0));
-			double sigmaSrc = 0, sigmaSt = 0;
-			for (size_t i1 = 0; i1 < mark.cols; i1 += 1)
-			{
-				for (size_t j1 = 0; j1 < mark.rows; j1 += 1)
-				{
-					if (sample.at<uchar>(j1, i1) > 100 && sample.at<uchar>(j1, i1) < 160)
-					{
-						markmaybe.at<short>(j1, i1) = 255;
-					}
-					uchar spt = Pic.at<uchar>(j + j1, i + i1);
-					uchar tpt = mark.at<uchar>(j1, i1);
-					sigmaSrc += (double)spt * (double)spt;
-					sigmaSt += (double)spt * (double)tpt;
-				}
-			}
+	//【5】边缘检测
+	Canny(thres, thres, 0, 255);
+	imshow("canny", thres);
 
-			double R = sigmaSt / (sqrt(sigmaSrc) * sqrt(sigmaMark));
-			if (R > sigma_Final)
+	//【6】轮廓发现
+	std::vector<std::vector<Point>> contours;
+	std::vector<Vec4i> her;
+	findContours(thres, contours, her, RETR_TREE, CHAIN_APPROX_SIMPLE);
+	Mat resultImage;
+	cvtColor(Pic, resultImage, COLOR_GRAY2BGR);
+	RNG rng(12345);
+	double area = 0.0;
+	Point pRadius;
+	for (size_t i = 0; i < contours.size(); i++) {
+		double area = contourArea(contours[i], false);
+		std::cout << area << std::endl;
+		//【7】根据面积及纵横比过滤轮廓
+		if (area > 50) {
+			Rect rect = boundingRect(contours[i]);
+			float scale = float(rect.width) / float(rect.height);
+			//if (scale < 1.5 && scale>0.7) 
 			{
-				sigma_Final = R;
-				sigma_x = i;
-				sigma_y = j;
+				drawContours(resultImage, contours, i, Scalar(0, 0, 255), 2);
+				int x = rect.width / 2;
+				int y = rect.height / 2;
+				//【8】找出圆心并绘制
+				pRadius = Point(rect.x + x, rect.y + y);
+				circle(resultImage, pRadius, 2, Scalar(255, 0, 0), 2);
 			}
 		}
 	}
-
-	rectangle(Pic, Rect(sigma_x, sigma_y, mark.cols, mark.rows), Scalar(0, 0, 255));
-	imshow("A", Pic);*/
+	imshow("result", resultImage);
 
 	cv::waitKey(0);
 }

@@ -634,13 +634,17 @@ namespace AgvDispatchor
             {
                 if (ROBOTS != null && ROBOTS.Count > 0)
                 {
-                    double x = Convert.ToDouble(tbxXpos.Text.Trim());
-                    double y = Convert.ToDouble(tbxYpos.Text.Trim());
-                    double z = Convert.ToDouble(tbxZpos.Text.Trim());
-                    double rx = Convert.ToDouble(tbxRXpos.Text.Trim());
-                    double ry = Convert.ToDouble(tbxRYpos.Text.Trim());
-                    double rz = Convert.ToDouble(tbxRZpos.Text.Trim());
-                    ROBOTS[0].MoveL(x, y, z, rx, ry, rz);
+                    RobotPoint rp = new RobotPoint();
+                    rp.X = Convert.ToDouble(tbxXpos.Text.Trim());
+                    rp.Y = Convert.ToDouble(tbxYpos.Text.Trim());
+                    rp.Z = Convert.ToDouble(tbxZpos.Text.Trim());
+                    rp.RX = Convert.ToDouble(tbxRXpos.Text.Trim());
+                    rp.RY = Convert.ToDouble(tbxRYpos.Text.Trim());
+                    rp.RZ = Convert.ToDouble(tbxRZpos.Text.Trim());
+                    if (ROBOTS[0].MoveL(rp))
+                    {
+                        ShowCallbackMessage("MoveL has reached the target position", MessageType.Result);
+                    }
                 }
             }
             catch (Exception ex)
@@ -672,6 +676,14 @@ namespace AgvDispatchor
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
+            //Line l = new Line();
+            //l.StrokeThickness = 1.5;
+            //l.Stroke = new SolidColorBrush(Colors.Red);
+            //l.X1 = 10;
+            //l.X2 = 10;
+            //l.Y1 = 10;
+            //l.Y2 = 100;
+            //cavMark.Children.Add(l);
         }
 
         private void btnStatus_Click(object sender, RoutedEventArgs e)
@@ -738,12 +750,6 @@ namespace AgvDispatchor
 
         private void btnOrig_Click(object sender, RoutedEventArgs e)
         {
-            for (int i = 0; i < ROBOTS.Count; i++)
-            {
-                int x, y;
-                ROBOTS[i].Cam.GetLastFrame(out x, out y);
-                break;
-            }
         }
 
         private void SpaceJog_Down(object sender, MouseButtonEventArgs e)
@@ -843,6 +849,103 @@ namespace AgvDispatchor
             }
         }
 
+        private void DegreeJog_Down(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 160, 230, 150));
+                int axis = -1, direct = -1, state = 1;
+                switch (lab.Name)
+                {
+                    case "labJ1plus":
+                        axis = 0;
+                        direct = 1;
+                        break;
+                    case "labJ1sub":
+                        axis = 0;
+                        direct = 0;
+                        break;
+                    case "labJ2plus":
+                        axis = 1;
+                        direct = 1;
+                        break;
+                    case "labJ2sub":
+                        axis = 1;
+                        direct = 0;
+                        break;
+                    case "labJ3plus":
+                        axis = 2;
+                        direct = 1;
+                        break;
+                    case "labJ3sub":
+                        axis = 2;
+                        direct = 0;
+                        break;
+                    case "labJ4plus":
+                        axis = 3;
+                        direct = 1;
+                        break;
+                    case "labJ4sub":
+                        axis = 3;
+                        direct = 0;
+                        break;
+                    case "labJ5plus":
+                        axis = 4;
+                        direct = 1;
+                        break;
+                    case "labJ5sub":
+                        axis = 4;
+                        direct = 0;
+                        break;
+                    case "labJ6plus":
+                        axis = 5;
+                        direct = 1;
+                        break;
+                    case "labJ6sub":
+                        axis = 5;
+                        direct = 0;
+                        break;
+                    default:
+                        break;
+                }
+                for (int i = 0; i < ROBOTS.Count; i++)
+                {
+                    if (ROBOTS[i].Code == SELECT_ROBOT_CODE && axis != -1)
+                    {
+                        if (ROBOTS[i].LongJogJ(axis, direct, state))
+                        {
+                            ShowCallbackMessage(lab.Name + " start to move degree", MessageType.Default);
+                            JOG_CIRCLE = true;
+                            Thread thJog = new Thread(KeepMove);
+                            thJog.Start();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void DegreeJog_Leave(object sender, MouseEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 230, 230, 230));
+                JOG_CIRCLE = false;
+            }
+        }
+
+        private void DegreeJog_Up(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                lab.Background = new SolidColorBrush(Color.FromArgb(255, 230, 230, 230));
+                JOG_CIRCLE = false;
+            }
+        }
+
         private void btnTurn_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -865,45 +968,76 @@ namespace AgvDispatchor
 
         private void btnTest_Click(object sender, RoutedEventArgs e)
         {
-            //if (FMS.AgvMove("8", (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+            //string requestString = "{\"appoint_vehicle_id\" : 8," +
+            //    "\"mission\" : [ {" +
+            //    "\"type\" : \"move\",\"destination\" : 1,\"map_id\" : 14," +
+            //    "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 0,\"action_param2\" : 0 } ]," +
+            //    "\"priority\" : 0,\"user_id\" : 1}";
+            //Stream resStream = null;
+            //byte[] body = Encoding.UTF8.GetBytes(requestString);
+            //HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://192.168.30.101:8088/api/v2/orders");
+            //request.Method = "POST";
+            //request.KeepAlive = true;
+            //request.Host = "192.168.30.101:8088";
+            //request.ContentType = "application/json;charset=UTF-8";
+            //request.ContentLength = body.Length;
+            //request.Headers.Add("token", "YWRtaW4sMTk3NDg2OTYzMDc2OSw3ODBjOGI5Mzk2YzgxMWVjMDVmODQ0YmQ0YjE1ZDA0Zg==");
+            //try
             //{
-            //    ShowCallbackMessage("Carrier start to transport success.", MessageType.Result);
+            //    Stream st = request.GetRequestStream();
+            //    st.Write(body, 0, body.Length);
+            //    st.Close();
+            //    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            //    ShowCallbackMessage("Response status code: " + response.StatusCode, MessageType.Result);
+            //    if (response.StatusCode == HttpStatusCode.OK)
+            //    {
+            //        resStream = response.GetResponseStream();
+            //    }
+            //    response.Close();
             //}
-            //else
+            //catch (Exception ex)
             //{
-            //    ShowCallbackMessage("Carrier start to transport fail", MessageType.Error);
+            //    ShowCallbackMessage(ex.Message, MessageType.Error);
             //}
-
-            string requestString = "{\"appoint_vehicle_id\" : 8," +
-                "\"mission\" : [ {" +
-                "\"type\" : \"move\",\"destination\" : 1,\"map_id\" : 14," +
-                "\"action_name\" : \"\",\"action_id\" : 0,\"action_param1\" : 0,\"action_param2\" : 0 } ]," +
-                "\"priority\" : 0,\"user_id\" : 1}";
-            Stream resStream = null;
-            byte[] body = Encoding.UTF8.GetBytes(requestString);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://192.168.30.101:8088/api/v2/orders");
-            request.Method = "POST";
-            request.KeepAlive = true;
-            request.Host = "192.168.30.101:8088";
-            request.ContentType = "application/json;charset=UTF-8";
-            request.ContentLength = body.Length;
-            request.Headers.Add("token", "YWRtaW4sMTk3NDg2OTYzMDc2OSw3ODBjOGI5Mzk2YzgxMWVjMDVmODQ0YmQ0YjE1ZDA0Zg==");
-            try
+            for (int i = 0; i < ROBOTS.Count; i++)
             {
-                Stream st = request.GetRequestStream();
-                st.Write(body, 0, body.Length);
-                st.Close();
-                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                ShowCallbackMessage("Response status code: " + response.StatusCode, MessageType.Result);
-                if (response.StatusCode == HttpStatusCode.OK)
+                int x, y, r;
+                ROBOTS[i].Cam.GetLastFrame(SnapType.Staff, out x, out y, out r);
+                int w = ROBOTS[i].Cam.GetWidth();
+                int h = ROBOTS[i].Cam.GetHeight();
+                if (x != 0 && y != 0 && r != 0)
                 {
-                    resStream = response.GetResponseStream();
+                    cavMark.Children.Clear();
+                    double cx = cavMark.Width * x / w;
+                    double cy = cavMark.Height * y / h;
+                    double cr = cavMark.Width * r / w;
+
+                    Line line1 = new Line();
+                    line1.StrokeThickness = 1;
+                    line1.Stroke = new SolidColorBrush(Colors.Red);
+                    line1.X1 = cx - 5;
+                    line1.X2 = cx + 5;
+                    line1.Y1 = line1.Y2 = cy;
+                    Line line2 = new Line();
+                    line2.StrokeThickness = 1;
+                    line2.Stroke = new SolidColorBrush(Colors.Red);
+                    line2.X1 = line2.X2 = cx;
+                    line2.Y1 = cy - 5;
+                    line2.Y2 = cy + 5;
+                    Ellipse elp = new Ellipse();
+                    elp.StrokeThickness = 1;
+                    elp.Stroke = new SolidColorBrush(Colors.Blue);
+                    elp.Margin = new Thickness(cx - cr, cy - cr, 0, 0);
+                    elp.Width = elp.Height = cr * 2;
+                    cavMark.Children.Add(line1);
+                    cavMark.Children.Add(line2);
+                    cavMark.Children.Add(elp);
                 }
-                response.Close();
-            }
-            catch (Exception ex)
-            {
-                ShowCallbackMessage(ex.Message, MessageType.Error);
+                else
+                {
+                    ShowCallbackMessage("staff find error", MessageType.Error);
+                }
+                break;
             }
         }
 

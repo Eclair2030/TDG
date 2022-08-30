@@ -24,6 +24,26 @@ namespace AgvDispatchor
         public double RX { get; set; }
         public double RY { get; set; }
         public double RZ { get; set; }
+
+        private static int X_OFFSET = 100;
+
+        public bool PointMatch(RobotPoint point)
+        {
+            bool result = false;
+            if (Math.Abs(point.X - X) < 1 && Math.Abs(point.Y - Y) < 1 && Math.Abs(point.Z - Z) < 1 && 
+                Math.Abs(point.RX - RX) < 1 && Math.Abs(point.RY - RY) < 1 && Math.Abs(point.RZ - RZ) < 1)
+            {
+                result = true;
+            }
+            return result;
+        }
+
+        public RobotPoint GetCarrierPosition(int carrIndex)
+        {
+            RobotPoint pos = this;
+            pos.X = X + X_OFFSET * carrIndex;
+            return pos;
+        }
     }
 
     public enum RobotAxis
@@ -52,10 +72,16 @@ namespace AgvDispatchor
     }
 
     public enum PositionNames
-    {
-        DevWait_0 = 0,              //设备第0个等待位
-        DevWait_1 = 1,              //设备第0个等待位
-        DevWait_2 = 2,              //设备第0个等待位
-        Dwait_3 = 3,              //设备第0个等待位，和中间位之间的桥梁
+    {   //等待位与拍照位共用
+        None = -1,                     //不存在的位置，默认值
+        Dwait0 = 0,                    //设备第0个等待位
+        Dwait1 = 1,                    //设备第1个等待位
+        Dwait2 = 2,                    //设备第2个等待位
+        Dwait3 = 3,                    //设备第3个等待位，和中间位之间的桥梁
+        Staff0 = 4,                     //Carrier第0个等待位
+        Staff1 = 5,                     //Carrier第1个等待位
+        Staff2 = 6,                     //Carrier第2个等待位
+        Staff3 = 7,                     //Carrier第3个等待位
+        Convert = 8,                 //中转位置
     }
 }

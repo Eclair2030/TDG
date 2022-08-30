@@ -29,9 +29,9 @@ namespace AgvDispatchor
                 statusRet = Cam.PixelFormat.Set(uEye.Defines.ColorMode.Mono8);
                 if (statusRet == uEye.Defines.Status.Success)
                 {
-                    Cam.Timing.PixelClock.Set(20);
-                    Cam.Timing.Exposure.Set(30);
-                    Cam.Timing.Framerate.Set(50);
+                    Cam.Timing.PixelClock.Set(35);
+                    Cam.Timing.Exposure.Set(25);
+                    Cam.Timing.Framerate.Set(16);
                     int x, y;
                     Cam.Size.AOI.Get(out x, out y, out Width, out Height);
 
@@ -68,6 +68,16 @@ namespace AgvDispatchor
                 Cam.Acquisition.Stop();
                 Cam.Exit();
             }
+        }
+
+        public int GetWidth()
+        {
+            return Width;
+        }
+
+        public int GetHeight()
+        {
+            return Height;
         }
 
         private uEye.Defines.Status AllocImageMems()
@@ -136,11 +146,12 @@ namespace AgvDispatchor
             return uEye.Defines.Status.NoSuccess;
         }
 
-        public void GetLastFrame(out int coordX, out int coordY)
+        public void GetLastFrame(SnapType type, out int coordX, out int coordY, out int radius)
         {
             int s32MemID;
             coordX = 0;
             coordY = 0;
+            radius = 0;
             uEye.Defines.Status statusRet = Cam.Memory.GetLast(out s32MemID);
             if ((uEye.Defines.Status.SUCCESS == statusRet) && (0 < s32MemID))
             {
@@ -152,7 +163,18 @@ namespace AgvDispatchor
                     Cam.Memory.GetHeight(s32MemID, out h);
                     Cam.Memory.GetLast(out frame);
                     Cam.Memory.Unlock(s32MemID);
-                    DLL.FindStaff(null, out coordX, out coordY, w, h, frame);
+                    switch (type)
+                    {
+                        case SnapType.Staff:
+                            DLL.FindStaff(null, out coordX, out coordY, out radius, w, h, frame);
+                            break;
+                        case SnapType.Empty:
+                            break;
+                        case SnapType.Full:
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -185,5 +207,12 @@ namespace AgvDispatchor
         private Camera Cam;
         private int Width, Height;
         private RenderImage ShowImage;
+    }
+
+    public enum SnapType
+    {
+        Staff = 0,                  //拍空杆
+        Empty = 1,              //拍空料
+        Full = 2,                   //拍满料
     }
 }

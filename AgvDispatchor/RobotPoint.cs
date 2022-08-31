@@ -26,6 +26,7 @@ namespace AgvDispatchor
         public double RZ { get; set; }
 
         private static int X_OFFSET = 100;
+        private static int DEVZ_OFFSET = 100;
 
         public bool PointMatch(RobotPoint point)
         {
@@ -38,10 +39,17 @@ namespace AgvDispatchor
             return result;
         }
 
-        public RobotPoint GetCarrierPosition(int carrIndex)
+        public RobotPoint GetCarrierMaterialPosition(int carrIndex)
         {
             RobotPoint pos = this;
             pos.X = X + X_OFFSET * carrIndex;
+            return pos;
+        }
+
+        public RobotPoint GetDeviceMaterialPosition(int devIndex)
+        {
+            RobotPoint pos = this;
+            pos.Z -= DEVZ_OFFSET * (devIndex % Material.TOTAL_MATERIAL_ONE_POSITION);
             return pos;
         }
     }
@@ -82,6 +90,8 @@ namespace AgvDispatchor
         Staff1 = 5,                     //Carrier第1个等待位
         Staff2 = 6,                     //Carrier第2个等待位
         Staff3 = 7,                     //Carrier第3个等待位
-        Convert = 8,                 //中转位置
+        BufferWait = 8,             //Buffer等待位
+        Buffer = 9,                     //Buffer取料位
+        Convert = 10,              //中转位置
     }
 }

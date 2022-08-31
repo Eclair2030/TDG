@@ -57,7 +57,6 @@ namespace AgvDispatchor
             Db.Open();
             RobotProcess rp = (RobotProcess)robot.Process;
             RobotStatus st = (RobotStatus)robot.Status;
-
             if (st != RobotStatus.ArmWorking)
             {
                 switch (st)
@@ -133,13 +132,14 @@ namespace AgvDispatchor
             }
             else
             {
+                string carrCode;
                 switch (robot.Arm)
                 {
                     case 0: //无料
                         int tarCode, tarArea, tarIndex;
-                        string carrCode;
-                        int carrIndex = Db.GetFirstMaterialOnCarrier(robot.Code, out carrCode, out tarCode, out tarArea, out tarIndex);
-                        if (carrIndex != -1 && carrCode != null)
+                        robot.CarrierIndex = Db.GetFirstMaterialOnCarrier(robot.Code, out carrCode, out tarCode, out tarArea, out tarIndex);
+                        robot.DeviceIndex = tarIndex;
+                        if (robot.CarrierIndex != -1 && carrCode != null)
                         {
                             int staff = Db.GetDeviceStaffState(tarCode, tarArea, tarIndex);
                             switch (staff)
@@ -148,7 +148,7 @@ namespace AgvDispatchor
                                     RobotPoint point = robot.ReadPointList(PositionNames.Staff0.ToString());
                                     if (point != null)
                                     {
-                                        RobotPoint tarPoint = point.GetCarrierPosition(carrIndex);
+                                        RobotPoint tarPoint = point.GetCarrierMaterialPosition(robot.CarrierIndex);
                                         if (tarPoint != null)
                                         {
                                             RobotPoint currPoint = robot.ReadActPos();
@@ -161,32 +161,29 @@ namespace AgvDispatchor
                                                     RobotPoint alignPoint = robot.CalcCarrierAlignData(x, y, currPoint);
                                                     if (alignPoint != null)
                                                     {
-                                                        if (ReadCurFSM() == ((int)CurFsmState.StandBy).ToString())
+                                                        if (MoveL(alignPoint))
                                                         {
-                                                            if (MoveL(alignPoint))
+                                                            if (robot.RiseMaterial())
                                                             {
-                                                                if (robot.RiseMaterial())
+                                                                if (Db.AssignMaterialsToRobot(carrCode, robot.CarrierIndex, robot.Code))
                                                                 {
-                                                                    if (Db.AssignMaterialsToRobot(carrCode, carrIndex, robot.Code))
+                                                                    if (Db.SetRobotArmStatus(robot.Code, 2))
                                                                     {
-                                                                        if (Db.SetRobotArmStatus(robot.Code, 2))
-                                                                        {
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
-                                                                        }
                                                                     }
                                                                     else
                                                                     {
-                                                                        Message("Assign material from carrier: " + carrCode + " to robot: " + robot.Code + " fail", MessageType.Error);
+                                                                        Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
                                                                     }
                                                                 }
+                                                                else
+                                                                {
+                                                                    Message("Assign material from carrier: " + carrCode + " to robot: " + robot.Code + " fail", MessageType.Error);
+                                                                }
                                                             }
-                                                            else
-                                                            {
-                                                                Message("Set robot: " + robot.Code + " movel to paw align position fail", MessageType.Error);
-                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            Message("Set robot: " + robot.Code + " movel to paw align position fail", MessageType.Error);
                                                         }
                                                     }
                                                     else{
@@ -200,15 +197,12 @@ namespace AgvDispatchor
                                             }
                                             else
                                             {
-                                                if (ReadCurFSM() == ((int)CurFsmState.StandBy).ToString())
+                                                if (MoveL(tarPoint))
                                                 {
-                                                    if (MoveL(tarPoint))
-                                                    {
-                                                    }
-                                                    else
-                                                    {
-                                                        Message("Set robot: " + robot.Code + " movel to snap target position fail", MessageType.Error);
-                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Message("Set robot: " + robot.Code + " movel to snap target position fail", MessageType.Error);
                                                 }
                                             }
                                         }
@@ -224,25 +218,54 @@ namespace AgvDispatchor
                                     
                                     break;
                                 case 1:     //抓取设备空料
-
-                                    if (Db.UnloadEmptyMaterialsFromDevice(tarCode, tarArea, tarIndex))
+                                    if (!robot.ReadActPos().PointMatch(ReadPointList(PositionNames.Convert.ToString())))
                                     {
-                                        if (Db.SetRobotArmStatus(robot.Code, 1))
+                                        if (robot.ToPosition(PositionNames.Convert.ToString()))
                                         {
                                         }
-                                        else
+                                    }
+                                    RobotPoint d0Point = robot.ReadPointList(PositionNames.Dwait0.ToString());
+                                    RobotPoint dPoint = d0Point.GetDeviceMaterialPosition(robot.DeviceIndex);
+                                    if (robot.MoveL(dPoint))
+                                    {
+                                        int x, y, r;
+                                        Cam.GetLastFrame(SnapType.Empty, out x, out y, out r);
+                                        if (x != 0 && y != 0 && r != 0)
                                         {
-                                            Message("Set robot: " + robot.Code + " arm status to 2 fail", MessageType.Error);
+                                            RobotPoint alignPoint = robot.CalcDeviceAlignData(x, y, robot.ReadActPos());
+                                            if (alignPoint != null)
+                                            {
+                                                if (MoveL(alignPoint))
+                                                {
+                                                    if (robot.RiseMaterial())
+                                                    {
+                                                        if (Db.AssignEmptyMaterialsFromDeviceToRobot(tarCode, tarArea, tarIndex, robot.Code))
+                                                        {
+                                                        }
+                                                        else
+                                                        {
+                                                            Message("Assign empty material to robot: " + robot.Code + " fail", MessageType.Error);
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Message("Set robot: " + robot.Code + " paw movel to device align position fail", MessageType.Error);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Message("Set robot: " + robot.Code + " paw device align point calculate fail", MessageType.Error);
+                                            }
                                         }
                                     }
                                     else
                                     {
-                                        Message("Unload empty material from deivce: " + tarCode + " area: " + tarArea + " index: " + tarIndex + " fail", MessageType.Error);
-                                    }
-                                    
+                                        Message("Robot: " + robot.Code + " paw MoveL to deviceIndex " + robot.DeviceIndex + " fail", MessageType.Error);
+                                    }                                    
                                     break;
                                 case 2:     //信息冲突，修改Carrier物料目标位置
-                                    if (Db.ReassignMaterials(tarCode, tarArea, tarIndex, carrCode, carrIndex))
+                                    if (Db.ReassignMaterials(tarCode, tarArea, tarIndex, carrCode, robot.CarrierIndex))
                                     {
                                     }
                                     else
@@ -260,35 +283,166 @@ namespace AgvDispatchor
                             if (robot.Buffer1 != 0)
                             {
                                 //回收Buffer后结束
-                            }
-
-                            if (Db.SetRobotStatus(robot.Code, RobotStatus.Idle))
-                            {
-                                if (Db.SetCarrierStatus(carrCode, CarrierStatus.Transport))
+                                if (!robot.ReadActPos().PointMatch(ReadPointList(PositionNames.Convert.ToString())))
                                 {
+                                    if (robot.ToPosition(PositionNames.Convert.ToString()))
+                                    {
+                                    }
                                 }
-                                else
+                                if (robot.ToPosition(PositionNames.BufferWait.ToString()))
                                 {
-                                    Message("Set carrier: " + carrCode + " status to Transport error", MessageType.Error);
+                                    if (robot.ToPosition(PositionNames.Buffer.ToString()))
+                                    {
+                                        int x, y, r;
+                                        Cam.GetLastFrame(SnapType.Empty, out x, out y, out r);
+                                        if (x != 0 && y != 0 && r != 0)
+                                        {
+                                            RobotPoint alignPoint = robot.CalcCarrierAlignData(x, y, robot.ReadActPos());
+                                            if (alignPoint != null)
+                                            {
+                                                if (MoveL(alignPoint))
+                                                {
+                                                    if (robot.RiseMaterial())
+                                                    {
+                                                        if (Db.AssignEmptyMaterialsFromBufferToRobot(robot.Code))
+                                                        {
+                                                        }
+                                                        else
+                                                        {
+                                                            Message("Assign material from buffer to robot: " + robot.Code + " fail", MessageType.Error);
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Message("Set robot: " + robot.Code + " movel to paw align position fail", MessageType.Error);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Message("Set robot: " + robot.Code + " paw align point calculate fail", MessageType.Error);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " camera snap find material fail", MessageType.Error);
+                                        }
+                                    }
                                 }
                             }
                             else
                             {
-                                Message("Set robot: " + robot.Code + " status to Idle error", MessageType.Error);
+                                if (Db.SetRobotStatus(robot.Code, RobotStatus.Idle))
+                                {
+                                    if (Db.SetCarrierStatus(carrCode, CarrierStatus.Transport))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Set carrier: " + carrCode + " status to Transport error", MessageType.Error);
+                                    }
+                                }
+                                else
+                                {
+                                    Message("Set robot: " + robot.Code + " status to Idle error", MessageType.Error);
+                                }
                             }
                         }
                         break;
                     case 1: //空料
-                        int pos = Db.GetFirstNullStaffOnCarrier(robot.Code, robot.Coordination);
-                        if (pos != -1)
+                        robot.CarrierIndex = Db.GetFirstNullStaffOnCarrier(robot.Code, robot.Coordination, out carrCode);
+                        if (robot.CarrierIndex != -1 && carrCode != null)
                         {
                             //Carrier有空杆，直接将空料放到Carrier的空杆上
+                            RobotPoint point = robot.ReadPointList(PositionNames.Staff0.ToString());
+                            if (point != null)
+                            {
+                                RobotPoint tarPoint = point.GetCarrierMaterialPosition(robot.CarrierIndex);
+                                if (tarPoint != null)
+                                {
+                                    RobotPoint currPoint = robot.ReadActPos();
+                                    if (!currPoint.PointMatch(tarPoint))
+                                    {
+                                        if (MoveL(tarPoint))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " movel to snap target position fail", MessageType.Error);
+                                        }
+                                    }
+                                    int x, y, r;
+                                    Cam.GetLastFrame(SnapType.Staff, out x, out y, out r);
+                                    if (x != 0 && y != 0 && r != 0)
+                                    {
+                                        RobotPoint alignPoint = robot.CalcCarrierAlignData(x, y, currPoint);
+                                        if (alignPoint != null)
+                                        {
+                                            if (MoveL(alignPoint))
+                                            {
+                                                if (robot.RiseMaterial())
+                                                {
+                                                    if (Db.AssignEmptyMaterialsFromRobotToCarrier(robot.Code, carrCode, robot.CarrierIndex))
+                                                    {
+                                                    }
+                                                    else
+                                                    {
+                                                        Message("Assign empty material from robot: " + robot.Code + " to carrier: " + carrCode + " fail", MessageType.Error);
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Message("Set robot: " + robot.Code + " movel to paw align position fail", MessageType.Error);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " paw align point calculate fail", MessageType.Error);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Message("Set robot: " + robot.Code + " camera snap find material fail", MessageType.Error);
+                                    }
+                                }
+                                else
+                                {
+                                    Message("Set robot: " + robot.Code + " get carrier snap target position fail", MessageType.Error);
+                                }
+                            }
+                            else
+                            {
+                                Message("Set robot: " + robot.Code + " get carrier snap base position fail", MessageType.Error);
+                            }
                         }
                         else
                         {
                             if (robot.Buffer1 == 0) //Carrier没有空杆，判断Buffer
                             {
                                 //Buffer为空，把料放到Buffer上
+                                if (!robot.ReadActPos().PointMatch(ReadPointList(PositionNames.Convert.ToString())))
+                                {
+                                    if (robot.ToPosition(PositionNames.Convert.ToString()))
+                                    {
+                                    }
+                                }
+                                if (robot.ToPosition(PositionNames.BufferWait.ToString()))
+                                {
+                                    if (robot.ToPosition(PositionNames.Buffer.ToString()))
+                                    {
+                                        if (robot.LaydownMaterial())
+                                        {
+                                            if (Db.AssignEmptyMaterialsFromRobotToBuffer(robot.Code))
+                                            {
+                                            }
+                                            else
+                                            {
+                                                Message("Assign empty material from robot: " + robot.Code + " to buffer fail", MessageType.Error);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             else
                             {
@@ -297,21 +451,56 @@ namespace AgvDispatchor
                         }
                         break;
                     case 2: //满料
-                        if (robot.PulloutMaterial())
-                        {
-                            robot.ToPosition(PositionNames.Convert.ToString());
-                        }
-
                         int tCode, tArea, tIndex;
                         if (Db.GetMaterialTargetOnRobot(robot.Code, out tCode, out tArea, out tIndex))
                         {
-                            //放料到设备
-                            if (Db.AssignMaterialsToDevice(robot.Code, tCode, tArea, tIndex))
+                            if (!robot.ReadActPos().PointMatch(ReadPointList(PositionNames.Convert.ToString())))
                             {
+                                if (robot.PulloutMaterial())
+                                {
+                                    if (robot.ToPosition(PositionNames.Convert.ToString()))
+                                    {
+                                    }
+                                }
+                            }
+                            RobotPoint d0Point = robot.ReadPointList(PositionNames.Dwait0.ToString());
+                            RobotPoint dPoint = d0Point.GetDeviceMaterialPosition(robot.DeviceIndex);
+                            if (robot.MoveL(dPoint))
+                            {
+                                int x, y, r;
+                                Cam.GetLastFrame(SnapType.Staff, out x, out y, out r);
+                                if (x != 0 && y != 0 && r != 0)
+                                {
+                                    RobotPoint alignPoint = robot.CalcDeviceAlignData(x, y, robot.ReadActPos());
+                                    if (alignPoint != null)
+                                    {
+                                        if (MoveL(alignPoint))
+                                        {
+                                            if (robot.LaydownMaterial())
+                                            {
+                                                if (Db.AssignMaterialsToDevice(robot.Code, tCode, tArea, tIndex))
+                                                {
+                                                }
+                                                else
+                                                {
+                                                    Message("Assign material from robot: " + robot.Code + " to device fail", MessageType.Error);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Message("Set robot: " + robot.Code + " paw movel to device align position fail", MessageType.Error);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Message("Set robot: " + robot.Code + " paw device align point calculate fail", MessageType.Error);
+                                    }
+                                }
                             }
                             else
                             {
-                                Message("Assign material from robot: " + robot.Code + " to device fail", MessageType.Error);
+                                Message("Robot: " + robot.Code + " paw MoveL to deviceIndex " + robot.DeviceIndex + " fail", MessageType.Error);
                             }
                         }
                         else
@@ -438,6 +627,10 @@ namespace AgvDispatchor
             {
                 if (Paw != null && Paw.Connected)
                 {
+                    while (ReadCurFSM() != ((int)CurFsmState.StandBy).ToString())
+                    {
+                        Thread.Sleep(100);
+                    }
                     string msg = "MoveL,0," + point.X + "," + point.Y + "," + point.Z + "," + point.RX + "," + point.RY + "," + point.RZ + ",;";
                     Paw.Send(Encoding.ASCII.GetBytes(msg));
                     byte[] data = new byte[Paw.ReceiveBufferSize];
@@ -885,6 +1078,15 @@ namespace AgvDispatchor
             return pos;
         }
 
+        private RobotPoint CalcDeviceAlignData(int x, int y, RobotPoint currPos)
+        {
+            RobotPoint pos = currPos;
+            pos.X += x - X_POINT;
+            pos.Y += SNAP_DISTANCE;
+            pos.Z -= y - Y_POINT;
+            return pos;
+        }
+
         private bool RiseMaterial()
         {
             bool result = false;
@@ -892,6 +1094,21 @@ namespace AgvDispatchor
             if (pos != null)
             {
                 pos.Z += Z_RISE;
+                if (MoveL(pos))
+                {
+                    result = true;
+                }
+            }
+            return result;
+        }
+
+        private bool LaydownMaterial()
+        {
+            bool result = false;
+            RobotPoint pos = ReadActPos();
+            if (pos != null)
+            {
+                pos.Z -= Z_RISE;
                 if (MoveL(pos))
                 {
                     result = true;

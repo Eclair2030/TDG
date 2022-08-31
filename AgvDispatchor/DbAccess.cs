@@ -1078,6 +1078,74 @@ namespace AgvDispatchor
                 SqlCommand com = new SqlCommand(sql, CONN);
                 com.ExecuteNonQuery();
                 com.Dispose();
+                sql = "update Robots set Arm = 2 where Code = '" + robotCode + "'";
+                com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool AssignEmptyMaterialsFromDeviceToRobot(int devCode, int devArea, int devIndex, string robotCode)
+        {
+            bool res = false;
+            string sql = "update Requests set Status = 0 where DeviceCode = " + devCode + " and DeviceArea = " + devArea + " and DeviceIndex = " + devIndex;
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                sql = "update Robots set Arm = 1 where Code = '" + robotCode + "'";
+                com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool AssignEmptyMaterialsFromBufferToRobot(string robotCode)
+        {
+            bool res = false;
+            string sql = "update Robots set Arm = 1, Buffer1 = 0 where Code = '" + robotCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool AssignEmptyMaterialsFromRobotToBuffer(string robotCode)
+        {
+            bool res = false;
+            string sql = "update Robots set Arm = 0, Buffer1 = 1 where Code = '" + robotCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                res = true;
+            }
+            return res;
+        }
+
+        public bool AssignEmptyMaterialsFromRobotToCarrier(string robotCode, string carrCode, int carrIndex)
+        {
+            bool res = false;
+            string sql = "update Robots set Arm = 0 where Code = '" + robotCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
+                sql = "update Materials set Staff = 1 where CarrierCode = '" + carrCode + "' and CarrierIndex = " + carrIndex;
+                com = new SqlCommand(sql, CONN);
+                com.ExecuteNonQuery();
+                com.Dispose();
                 res = true;
             }
             return res;
@@ -1098,22 +1166,7 @@ namespace AgvDispatchor
                 com = new SqlCommand(sql, CONN);
                 com.ExecuteNonQuery();
                 com.Dispose();
-                res = true;
-            }
-            return res;
-        }
-
-        public bool UnloadEmptyMaterialsFromDevice(int code, int area, int index)
-        {
-            bool res = false;
-            string sql = "update Materials set Staff = 0 where TargetDeviceCode = " + code + " and TargetDeviceArea = " + 
-                area + " and TargetDeviceIndex = " + index;
-            if (CONN.State == System.Data.ConnectionState.Open)
-            {
-                SqlCommand com = new SqlCommand(sql, CONN);
-                com.ExecuteNonQuery();
-                com.Dispose();
-                sql = "update Requests set Status = 0 where DeviceCode = " + code + " and DeviceArea = " + area + " and DeviceIndex = " + index;
+                sql = "update Robots set Arm = 0 where Code = '" + robotCode + "'";
                 com = new SqlCommand(sql, CONN);
                 com.ExecuteNonQuery();
                 com.Dispose();
@@ -1207,29 +1260,36 @@ namespace AgvDispatchor
             return res;
         }
 
-        public int GetFirstNullStaffOnCarrier(string robotCode, int coordinate)
+        public int GetFirstNullStaffOnCarrier(string robotCode, int coordinate, out string carrCode)
         {
             int pos = -1;
+            carrCode = null;
             try
             {
                 int min = coordinate == 1 ? 0 : 18;
                 int max = coordinate == 1 ? 17 : 35;
-                string sql = "select top 1 carrierIndex from Materials where CarrierIndex >= " + min + " and CarrierIndex <= " + max +
+                string sql = "select top 1 carrierIndex,CarrierCode from Materials where CarrierIndex >= " + min + " and CarrierIndex <= " + max +
                     " and Staff = 0 and CarrierCode = (select Code from Carriers where Robot_" + coordinate + " = '" + robotCode + "') order by CarrierIndex asc";
                 if (CONN.State == System.Data.ConnectionState.Open)
                 {
                     SqlCommand com = new SqlCommand(sql, CONN);
-                    object index = com.ExecuteScalar();
-                    com.Dispose();
-                    if (index != null)
+                    SqlDataReader reader = com.ExecuteReader();
+                    if (reader != null && reader.HasRows)
                     {
-                        pos = Convert.ToInt32(index);
+                        while (reader.Read())
+                        {
+                            pos = Convert.ToInt32(reader["carrierIndex"]);
+                            carrCode = reader["CarrierCode"].ToString();
+                        }
                     }
+                    reader.Close();
+                    com.Dispose();
                 }
             }
             catch (Exception)
             {
                 pos = -1;
+                carrCode = null;
             }
             return pos;
         }

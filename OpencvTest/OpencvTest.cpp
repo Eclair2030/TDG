@@ -59,49 +59,70 @@ void Sign()
 	imwrite("D:\\zy.png", des);
 }
 
+void FindCircle(Mat* pic)
+{
+	// smooth it, otherwise a lot of false circles may be detected
+	Mat gray;
+	GaussianBlur(*pic, gray, Size(9, 9), 2, 2);
+	std::vector<Vec3f> circles;
+	HoughCircles(gray, circles, HOUGH_GRADIENT, 2, gray.rows / 4, 200, 100);
+	for (size_t i = 0; i < circles.size(); i++)
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+		// draw the circle center
+		circle(*pic, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+		// draw the circle outline
+		circle(*pic, center, radius, Scalar(0, 0, 255), 3, 8, 0);
+	}
+	namedWindow("circles", 1);
+	imshow("circles", *pic);
+}
+
 int main(int argc, char** argv)
 {
-	Mat Pic = imread("D:\\AGV1.bmp", IMREAD_GRAYSCALE);
-	Mat thres;
-	threshold(Pic, thres, 20, 255, THRESH_BINARY);
-	imshow("threshold", thres);
-	//【4】执行形态学开操作去除噪点
-	Mat kernel = getStructuringElement(MORPH_RECT, Size(7, 7), Point(-1, -1));
-	morphologyEx(thres, thres, MORPH_DILATE, kernel, Point(-1, -1), 1);
-	imshow("morphologyEx", thres);
+	Mat Pic = imread("D:\\AGV2.bmp", IMREAD_GRAYSCALE);
+	FindCircle(&Pic);
+	//Mat thres;
+	//threshold(Pic, thres, 80, 255, THRESH_BINARY);
+	//imshow("threshold", thres);
+	////【4】执行形态学开操作去除噪点
+	//Mat kernel = getStructuringElement(MORPH_RECT, Size(7, 7), Point(-1, -1));
+	//morphologyEx(thres, thres, MORPH_DILATE, kernel, Point(-1, -1), 1);
+	//imshow("morphologyEx", thres);
 
-	//【5】边缘检测
-	Canny(thres, thres, 0, 255);
-	imshow("canny", thres);
+	////【5】边缘检测
+	//Canny(thres, thres, 0, 255);
+	//imshow("canny", thres);
 
-	//【6】轮廓发现
-	std::vector<std::vector<Point>> contours;
-	std::vector<Vec4i> her;
-	findContours(thres, contours, her, RETR_TREE, CHAIN_APPROX_SIMPLE);
-	Mat resultImage;
-	cvtColor(Pic, resultImage, COLOR_GRAY2BGR);
-	RNG rng(12345);
-	double area = 0.0;
-	Point pRadius;
-	for (size_t i = 0; i < contours.size(); i++) {
-		double area = contourArea(contours[i], false);
-		std::cout << area << std::endl;
-		//【7】根据面积及纵横比过滤轮廓
-		if (area > 50) {
-			Rect rect = boundingRect(contours[i]);
-			float scale = float(rect.width) / float(rect.height);
-			//if (scale < 1.5 && scale>0.7) 
-			{
-				drawContours(resultImage, contours, i, Scalar(0, 0, 255), 2);
-				int x = rect.width / 2;
-				int y = rect.height / 2;
-				//【8】找出圆心并绘制
-				pRadius = Point(rect.x + x, rect.y + y);
-				circle(resultImage, pRadius, 2, Scalar(255, 0, 0), 2);
-			}
-		}
-	}
-	imshow("result", resultImage);
+	////【6】轮廓发现
+	//std::vector<std::vector<Point>> contours;
+	//std::vector<Vec4i> her;
+	//findContours(thres, contours, her, RETR_TREE, CHAIN_APPROX_SIMPLE);
+	//Mat resultImage;
+	//cvtColor(Pic, resultImage, COLOR_GRAY2BGR);
+	//RNG rng(12345);
+	//double area = 0.0;
+	//Point pRadius;
+	//for (size_t i = 0; i < contours.size(); i++) {
+	//	double area = contourArea(contours[i], false);
+	//	std::cout << area << std::endl;
+	//	//【7】根据面积及纵横比过滤轮廓
+	//	if (area > 500) {
+	//		Rect rect = boundingRect(contours[i]);
+	//		float scale = float(rect.width) / float(rect.height);
+	//		if (scale < 1.2 && scale>0.8) 
+	//		{
+	//			drawContours(resultImage, contours, i, Scalar(0, 0, 255), 2);
+	//			int x = rect.width / 2;
+	//			int y = rect.height / 2;
+	//			//【8】找出圆心并绘制
+	//			pRadius = Point(rect.x + x, rect.y + y);
+	//			circle(resultImage, pRadius, 2, Scalar(255, 0, 0), 2);
+	//		}
+	//	}
+	//}
+	//imshow("result", resultImage);
 
 	cv::waitKey(0);
 }

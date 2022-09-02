@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AgvDispatchor
 {
-    internal class FmsAction
+    public class FmsAction
     {
         public FmsAction(SendMessage sm)
         {
@@ -18,31 +18,63 @@ namespace AgvDispatchor
             MOVE_URL = "http://192.168.30.101:8088/api/v2/orders";
             INFO_URL = "http://192.168.30.101:8088/api/v2/vehicles/";
             SYS_STATE_NAME = "sys_state";
-            SYS_STATION_NAME = "curr_station_id";
+            SYS_STATION_NAME = "cur_station_no";
             Message = sm;
-            MAP_ID = 14;
+            MAP_ID = 19;
+            MOVING = false;
         }
 
         public FmsActionResult AgvMove(string agvCode, int position)
         {
             FmsActionResult result = FmsActionResult.Default;
-            string resquest = MakeCarrierMoveRequestPostBody(agvCode, position);
-            Stream resStream = ReceivePostResponseStream(resquest, MOVE_URL);
-            if (resStream != null)
+            if (GetAgvInfo(agvCode) == AgvState.IDLE.ToString())
             {
-                result = FmsActionResult.Success;
+                if (GetAgvStation(agvCode) != position)
+                {
+                    lock (OBJ)
+                    {
+                        if (!MOVING)
+                        {
+                            MOVING = true;
+                        }
+                    }
+                    
+                    string resquest = MakeCarrierMoveRequestPostBody(agvCode, position);
+                    Stream resStream = ReceivePostResponseStream(resquest, MOVE_URL);
+                    if (resStream != null)
+                    {
+                        result = FmsActionResult.Executing;
+                        Message("Agv: " + agvCode + " start to move to position: " + position, MessageType.Default);
+                    }
+                    else
+                    {
+                        result = FmsActionResult.Exceptions;
+                        Message("Agv: " + agvCode + " move to position: " + position + " fail", MessageType.Error);
+                    }
+                }
+                else
+                {
+                    result = FmsActionResult.Success;
+                    lock (OBJ)
+                    {
+                        MOVING = false;
+                    }
+                    
+                    Message("Agv: " + agvCode + " has reached position: " + position, MessageType.Default);
+                }
             }
             else
             {
-                result = FmsActionResult.Exceptions;
+                //Message("Agv: " + agvCode + " is moving right now", MessageType.Default);
+                result = FmsActionResult.Busy;
             }
             return result;
         }
 
         public string GetAgvInfo(string agvCode)
         {
-            //return GetAgvInfoByName(GetResponse(carrierCode, INFO_URL), SYS_STATE_NAME);
-            return GetResponse(agvCode, INFO_URL);
+            return GetAgvInfoByName(GetResponse(agvCode, INFO_URL), SYS_STATE_NAME);
+            //return GetResponse(agvCode, INFO_URL);
         }
 
         public int GetAgvStation(string agvCode)
@@ -81,7 +113,7 @@ namespace AgvDispatchor
                 st.Write(body, 0, body.Length);
                 st.Close();
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                Message("Response status code: " + response.StatusCode, MessageType.Result);
+                //Message("Response status code: " + response.StatusCode, MessageType.Result);
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     resStream = response.GetResponseStream();
@@ -108,7 +140,7 @@ namespace AgvDispatchor
             try
             {
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                Message("Get Agv Info Response status code: " + response.StatusCode, MessageType.Result);
+                //Message("Get Agv Info Response status code: " + response.StatusCode, MessageType.Result);
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     Stream st = response.GetResponseStream();
@@ -151,6 +183,8 @@ namespace AgvDispatchor
 
         private string CONTENT_TYPE, USER_AGENT, TOKEN, MOVE_URL, INFO_URL, SYS_STATE_NAME, SYS_STATION_NAME;
         private int MAP_ID;
+        private bool MOVING;
+        private static object OBJ = new object();
         public SendMessage Message;
     }
 
@@ -160,21 +194,24 @@ namespace AgvDispatchor
         Success = 1,
         Fail = 2,
         Exceptions = 3,
+        Busy = 4,
+        Executing = 5,
     }
 
     public enum FmsCarrierPosition
     {
         None = 0,
-        SupplyLifter = 1,
-        SupplyLifterQueue = 2,
-        RetriveLifter = 3,
-        RetriveLifterQueue = 4,
-        Ready = 5,
-        Dev1 = 6,
-        Dev2 = 7,
-        Dev3 = 8,
-        ChargeQueue = 9,
-        Charge = 10,
+        ChargeQueue = 1,
+        ChargePre = 2,
+        Charge = 3,
+        SupplyQueue = 21,
+        SupplyPre = 22,
+        Supply = 23,
+        RetriveQueue = 31,
+        RetrivePre = 32,
+        Retrive = 33,
+        Idle = 41,
+        Dev0 = 51,
     }
 
     public enum AgvState

@@ -37,6 +37,7 @@ namespace AgvDispatchor
             {
                 CarrierStatus st = (CarrierStatus)Convert.ToInt32(carrier.Status);
                 List<Material> materials = Db.GetMaterialsByCarrierCode(Code);
+                string lifterCode;
                 switch (st)
                 {
                     case CarrierStatus.Retrieve:
@@ -56,7 +57,6 @@ namespace AgvDispatchor
                             Message("No materials on Carrier: " + Code, MessageType.Exception);
                             if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
                             {
-                                string lifterCode;
                                 if (Db.AddCarrierToShortestQueue(LifterType.Supply, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
                                 {
                                     //HttpWebRequest派去队列排队位置
@@ -112,7 +112,7 @@ namespace AgvDispatchor
                                     int cur = fms.GetAgvStation(Code);
                                     if (cur != -1 && cur != pos)
                                     {
-                                        if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                        if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev0) == FmsActionResult.Success)
                                         {
                                             if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
                                             {
@@ -166,7 +166,7 @@ namespace AgvDispatchor
                                 int cur = fms.GetAgvStation(Code);
                                 if (cur != -1 && cur != pos)
                                 {
-                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev1) == FmsActionResult.Success)
+                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev0) == FmsActionResult.Success)
                                     {
                                         if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
                                         {
@@ -191,7 +191,7 @@ namespace AgvDispatchor
                     case CarrierStatus.Complete:
                         if (Db.SetCarrierStatus(Code, CarrierStatus.Retrieve))
                         {
-                            string lifterCode;
+                            //string lifterCode;
                             if (Db.AddCarrierToShortestQueue(LifterType.Retrive, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
                             {
                                 //HttpWebRequest派去队列排队位置
@@ -276,25 +276,15 @@ namespace AgvDispatchor
                             }
                             else
                             {
-                                if (Db.SetCarrierStatus(Code, CarrierStatus.Ready))
+                                if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
                                 {
-                                    if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
+                                    if (Db.SetCarrierStatus(Code, CarrierStatus.Ready))
                                     {
-                                        if (fms.AgvMove(Code, (int)FmsCarrierPosition.Ready) == FmsActionResult.Success)
-                                        {
-                                        }
-                                        else
-                                        {
-                                            Message("Carrier: " + Code + " move to ready area fail", MessageType.Error);
-                                        }
                                     }
                                     else
                                     {
+                                        Message("Carrier: " + Code + " set status to Ready fail", MessageType.Error);
                                     }
-                                }
-                                else
-                                {
-                                    Message("Carrier: " + Code + " set status to Ready fail", MessageType.Error);
                                 }
                             }
                         }
@@ -304,46 +294,37 @@ namespace AgvDispatchor
                         }
                         break;
                     case CarrierStatus.Ready:
-                        if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
+                        if (Db.AddCarrierToShortestQueue(LifterType.Supply, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
                         {
-                            string lifterCode;
-                            if (Db.AddCarrierToShortestQueue(LifterType.Supply, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
+                            //HttpWebRequest派去队列排队位置
+                            for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
                             {
-                                //HttpWebRequest派去队列排队位置
-                                int liftPos = 1;
-                                for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
+                                if (MainWindow.LIFTERS[i].Code == lifterCode)
                                 {
-                                    if (MainWindow.LIFTERS[i].Code == lifterCode)
+                                    if (fms.AgvMove(Code, MainWindow.LIFTERS[i].QueuePosition) == FmsActionResult.Success)
                                     {
-                                        liftPos = MainWindow.LIFTERS[i].QueuePosition;
+                                        if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Carrier: " + Code + " set status to init fail", MessageType.Error);
+                                        }
                                     }
-                                }
-                                if (liftPos == -1)
-                                {
                                     break;
                                 }
-                                if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
-                                {
-                                    if (fms.AgvMove(Code, liftPos) == FmsActionResult.Success)
-                                    {
-                                    }
-                                    else
-                                    {
-                                        Message("Carrier: " + Code + " move to shortest lifter queue fail", MessageType.Error);
-                                    }
-                                }
-                                else
-                                {
-                                }
+                            }
+                        }
+                        else
+                        {
+                            if (lifterCode == string.Empty)
+                            {
+                                Message("Add Carrier: " + Code + " is already in queue", MessageType.Default);
                             }
                             else
                             {
                                 Message("Add Carrier: " + Code + " to shortest lifter queue fail", MessageType.Error);
                             }
-                        }
-                        else
-                        {
-                            Message("Empty Carrier: " + Code + " set status to init fail", MessageType.Error);
                         }
                         break;
                     case CarrierStatus.Charging:
@@ -356,7 +337,7 @@ namespace AgvDispatchor
                                 {
                                     if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
                                     {
-                                        if (fms.AgvMove(Code, (int)FmsCarrierPosition.Ready) == FmsActionResult.Success)
+                                        if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
                                         {
                                         }
                                         else

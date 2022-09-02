@@ -73,12 +73,12 @@ namespace AgvDispatchor
             IO = new StoreIO();
             FMS = new FmsAction(ShowCallbackMessage);
 
-            //TH_FIXED = new Thread(FixedAction);
-            //TH_FIXED.Start();
-            //TH_CARRIER = new Thread(AllCarrierAction);
-            //TH_CARRIER.Start();
-            TH_ROBOT = new Thread(AllRobotAction);
-            TH_ROBOT.Start();
+            TH_FIXED = new Thread(FixedAction);
+            TH_FIXED.Start();
+            TH_CARRIER = new Thread(AllCarrierAction);
+            TH_CARRIER.Start();
+            //TH_ROBOT = new Thread(AllRobotAction);
+            //TH_ROBOT.Start();
         }
 
         public void ShowCallbackMessage(string msg, MessageType mt)
@@ -117,6 +117,7 @@ namespace AgvDispatchor
                                     lvLifters.Items.Add(item);
                                 }));
                                 LIFTERS[i].Message = ShowCallbackMessage;
+                                LIFTERS[i].Fms = FMS;
                                 Thread thOneLift;
                                 if (LIFTERS[i].Type == (int)LifterType.Retrive)
                                 {
@@ -346,17 +347,16 @@ namespace AgvDispatchor
                     string firstCarr = DB.LifterQueueAutoCheck(LIFTERS[i].Code);
                     if (firstCarr == null)
                     {
-                        ShowCallbackMessage("queue for " + LIFTERS[i].Code + " auto forward fail", MessageType.Error);
+                        //ShowCallbackMessage("queue for " + LIFTERS[i].Code + " auto forward fail or queue is empty", MessageType.Default);
                     }
                     else if (firstCarr == string.Empty)
                     {
-                        //ShowCallbackMessage("queue for " + LIFTERS[i].Code + " 1 step forward", MessageType.Default);
+                        ShowCallbackMessage("queue for " + LIFTERS[i].Code + " 1 step forward", MessageType.Default);
                     }
                     else
                     {
-                        if ( ( (LIFTERS[i].Type == (int)LifterType.Supply && LIFTERS[i].Status == (int)SupplyLifterStatus.Avoid) ||
+                        if ( (LIFTERS[i].Type == (int)LifterType.Supply && LIFTERS[i].Status == (int)SupplyLifterStatus.Avoid) ||
                             (LIFTERS[i].Type == (int)LifterType.Retrive && LIFTERS[i].Status == (int)RetriveLifterStatus.Load) )
-                            && FMS.GetAgvInfo(firstCarr) == AgvState.IDLE.ToString())
                         {
                             if (FMS.AgvMove(firstCarr, LIFTERS[i].Position) == FmsActionResult.Success)
                             {
@@ -366,7 +366,7 @@ namespace AgvDispatchor
                                     { }
                                     else
                                     {
-                                        ShowCallbackMessage("carrier: " + firstCarr + " status set to initing fail", MessageType.Error);
+                                        ShowCallbackMessage("Carrier: " + firstCarr + " status set to initing fail", MessageType.Error);
                                     }
                                 }
                                 else
@@ -375,13 +375,9 @@ namespace AgvDispatchor
                                     { }
                                     else
                                     {
-                                        ShowCallbackMessage("carrier: " + firstCarr + " status set to retrieving fail", MessageType.Error);
+                                        ShowCallbackMessage("Carrier: " + firstCarr + " status set to retrieving fail", MessageType.Error);
                                     }
                                 }
-                            }
-                            else
-                            {
-                                ShowCallbackMessage("first carrier in queue: " + firstCarr + " move to lifter: " + LIFTERS[i].Code + " fail", MessageType.Error);
                             }
                         }
                         else
@@ -400,7 +396,7 @@ namespace AgvDispatchor
                 try
                 {
                     Dispatcher.Invoke(new Action(() => { labSelectCarrierCode.Content = "Carrier Code: " + SELECT_CARRIER_CODE; }));
-                    for (int i = 1; i < 37; i++)
+                    for (int i = 0; i < 36; i++)
                     {
                         Dispatcher.Invoke(new Action(() =>
                         {
@@ -1043,8 +1039,8 @@ namespace AgvDispatchor
 
         private void btnInfo_Click(object sender, RoutedEventArgs e)
         {
-            string str = FMS.GetAgvInfo("8");
-            ShowCallbackMessage(str, MessageType.Result);
+            int str = FMS.GetAgvStation("8");
+            ShowCallbackMessage(str.ToString(), MessageType.Result);
         }
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)

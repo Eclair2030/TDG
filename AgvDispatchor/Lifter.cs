@@ -20,6 +20,7 @@ namespace AgvDispatchor
 
         public delegate void SendMessage(string msg, MessageType mt);
         public SendMessage Message;
+        public FmsAction Fms;
 
         public void RetriveLifterAction(object obj)
         {
@@ -293,7 +294,9 @@ namespace AgvDispatchor
                             case SupplyLifterStatus.Avoid:
                                 if (db.ExistMaterialRequests() > 0)
                                 {
-                                    if (true)   //用Sensor判断搬送车是否已经到位
+                                    carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)lifter.Type);
+                                    if (Fms.GetAgvInfo(carrierCode) == AgvState.IDLE.ToString() && 
+                                        Fms.GetAgvStation(carrierCode) == lifter.Position)   //用FMS系统判断搬送车是否已经到位
                                     {
                                         if (db.SetSupplyLifterStatus(SupplyLifterStatus.Arrive, lifter.Code))
                                         {
@@ -307,50 +310,59 @@ namespace AgvDispatchor
                                 break;
                             case SupplyLifterStatus.Arrive:
                                 //升降机去下料位
-                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unloading, lifter.Code))
+                                if (true)
                                 {
-                                }
-                                else
-                                {
-                                    Message("Supply lifter: " + lifter.Code + " set status to Unloading fail", MessageType.Error);
+                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unloading, lifter.Code))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Supply lifter: " + lifter.Code + " set status to Unloading fail", MessageType.Error);
+                                    }
                                 }
                                 break;
                             case SupplyLifterStatus.Unloading:
                                 if (true)   //电机判断是否到达下料位
                                 {
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unload, lifter.Code))
+                                    carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, LifterType.Supply);
+                                    if (carrierCode != null && carrierCode != string.Empty)
                                     {
-                                        string carrCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, LifterType.Supply);
-                                        if (carrCode != null && carrCode != string.Empty)
+                                        if (db.AssignMaterialsToCarrier(lifter.Code, carrierCode))     //物料分配到搬送车
                                         {
-                                            if (db.AssignMaterialsToCarrier(lifter.Code, carrCode))     //物料分配到搬送车
+                                            int res = db.AssignMaterialsTargetOnCarrier(carrierCode);      //更改物料请求表，分配每个物料的目的地
+                                            if (res == 0)
                                             {
-                                                if (db.AssignMaterialsTargetOnCarrier(carrCode))      //更改物料请求表，分配每个物料的目的地
+                                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Unload, lifter.Code))
                                                 {
                                                 }
                                                 else
                                                 {
-                                                    Message("Assign materials from carrier: " + carrCode + " to device fail", MessageType.Error);
+                                                    Message("Supply lifter: " + lifter.Code + " set status to Unload fail", MessageType.Error);
                                                 }
                                             }
-                                            else
+                                            else if (res == -1)
                                             {
-                                                Message("Assign materials from lifter: " + lifter.Code + " to carrier fail", MessageType.Error);
+                                                Message("Assign materials from carrier: " + carrierCode + " to device fail", MessageType.Error);
+                                            }
+                                            else if (res == 1)
+                                            {
+                                                Message("There is no request right now", MessageType.Error);
                                             }
                                         }
                                         else
                                         {
-                                            Message("Get carrier in lifter queue fail", MessageType.Error);
+                                            Message("Assign materials from lifter: " + lifter.Code + " to carrier fail", MessageType.Error);
                                         }
                                     }
                                     else
                                     {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Unload fail", MessageType.Error);
+                                        Message("Get carrier in lifter queue fail", MessageType.Error);
                                     }
                                 }
                                 break;
                             case SupplyLifterStatus.Unload:
-                                if (true)   //用Sensor判断搬送车是否已离开
+                                break;
+                                if (false)   //用Sensor判断搬送车是否已离开
                                 {
                                     if (db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifter.Code))
                                     {

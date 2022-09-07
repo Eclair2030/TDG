@@ -159,6 +159,27 @@ namespace AgvDispatchor
             return result;
         }
 
+        public int GetCarrierStatus(string carrCode)
+        {
+            int status = -1;
+            string sql = "select status from Carriers where Code = '" + carrCode + "'";
+            try
+            {
+                SqlCommand com = new SqlCommand(sql, CONN);
+                object obj = com.ExecuteScalar();
+                com.Dispose();
+
+                if (obj != null)
+                {
+                    status = Convert.ToInt32(obj);
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return status;
+        }
+
         public string GetFirstCarrierInLifterQueuebyCode(string liftCode, LifterType lt)
         {
             string carrierCode = string.Empty;
@@ -199,26 +220,30 @@ namespace AgvDispatchor
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
                 SqlDataReader r = com.ExecuteReader();
+                int dCode = 0;
+                int dArea = 0;
+                int dIndex = 0;
                 if (r != null && r.HasRows)
                 {
                     while (r.Read())
                     {
-                        int dCode = Convert.ToInt32(r["TargetDeviceCode"]);
-                        int dArea = Convert.ToInt32(r["TargetDeviceArea"]);
-                        int dIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
-                        pos = dCode * Material.TOTAL_MATERIAL_ONE_DEVICE / Material.TOTAL_MATERIAL_ONE_POSITION
-                            + dArea * Material.TOTAL_MATERIAL_ONE_AREA / Material.TOTAL_MATERIAL_ONE_POSITION
-                            + dIndex * Material.TOTAL_AGVS_ONE_POSITION / Material.TOTAL_MATERIAL_ONE_POSITION;
-                    }
-                    if (pos != -1)
-                    {
-                        sql = "update Carriers set TargetPosition = " + pos + " where Code = '" + carrCode + "'";
-                        com = new SqlCommand(sql, CONN);
-                        com.ExecuteNonQuery();
+                        dCode = Convert.ToInt32(r["TargetDeviceCode"]);
+                        dArea = Convert.ToInt32(r["TargetDeviceArea"]);
+                        dIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
+                        pos = (dCode - 1) * Material.TOTAL_LOAD_POS_ONE_DEVICE
+                            + dArea * Material.TOTAL_LOAD_POS_ONE_DEVICE / 10
+                            + dIndex / Material.TOTAL_MATERIAL_ONE_POSITION * Material.TOTAL_AGVS_ONE_POSITION;
                     }
                 }
-                com.Dispose();
                 r.Close();
+                com.Dispose();
+
+                if (pos != -1)
+                {
+                    sql = "update Carriers set TargetPosition = " + pos + " where Code = '" + carrCode + "'";
+                    com = new SqlCommand(sql, CONN);
+                    com.ExecuteNonQuery();
+                }
             }
             catch (Exception)
             {
@@ -271,6 +296,13 @@ namespace AgvDispatchor
                             lifter.Parking = reader["Parking"].ToString();
                             lifter.QueuePosition = Convert.ToInt32(reader["QueuePosition"]);
                             lifter.Position = Convert.ToInt32(reader["Position"]);
+                            lifter.BufferPosition = Convert.ToInt32(reader["BufferPosition"]);
+                            if (lifter.Motors.InitMethods(Convert.ToInt32(reader["LeftUp"]).ToString(), Convert.ToInt32(reader["LeftDown"]).ToString(), 
+                                Convert.ToInt32(reader["RightUp"]).ToString(), Convert.ToInt32(reader["RightDown"]).ToString(),
+                                Convert.ToInt32(reader["LeftChainPush"]).ToString(), Convert.ToInt32(reader["LeftChainPull"]).ToString(),
+                                Convert.ToInt32(reader["RightChainPush"]).ToString(), Convert.ToInt32(reader["RightChainPull"]).ToString()))
+                            {
+                            }
                             lifters.Add(lifter);
                         }
                     }
@@ -310,6 +342,15 @@ namespace AgvDispatchor
                             lifter.Type = Convert.ToInt32(reader["Type"]);
                             lifter.Status = Convert.ToInt32(reader["Status"]);
                             lifter.Parking = reader["Parking"].ToString();
+                            lifter.QueuePosition = Convert.ToInt32(reader["QueuePosition"]);
+                            lifter.Position = Convert.ToInt32(reader["Position"]);
+                            lifter.BufferPosition = Convert.ToInt32(reader["BufferPosition"]);
+                            if (lifter.Motors.InitMethods(Convert.ToInt32(reader["LeftUp"]).ToString(), Convert.ToInt32(reader["LeftDown"]).ToString(),
+                                Convert.ToInt32(reader["RightUp"]).ToString(), Convert.ToInt32(reader["RightDown"]).ToString(),
+                                Convert.ToInt32(reader["LeftChainPush"]).ToString(), Convert.ToInt32(reader["LeftChainPull"]).ToString(),
+                                Convert.ToInt32(reader["RightChainPush"]).ToString(), Convert.ToInt32(reader["RightChainPull"]).ToString()))
+                            {
+                            }
                             lifters.Add(lifter);
                         }
                     }
@@ -326,6 +367,30 @@ namespace AgvDispatchor
                 com.Dispose();
             }
             return lifters;
+        }
+
+        public string GetLiftersByCarrier(string carrCode)
+        {
+            string code = null;
+            string sql = "select Code from LifterQueue where CarrierCode = '" + carrCode + "'";
+            if (CONN.State == System.Data.ConnectionState.Open)
+            {
+                try
+                {
+                    SqlCommand com = new SqlCommand(sql, CONN);
+                    object obj = com.ExecuteScalar();
+                    com.Dispose();
+                    if (obj != null)
+                    {
+                        code = obj.ToString();
+                    }
+                }
+                catch (Exception)
+                {
+                    code = null;
+                }
+            }
+            return code;
         }
 
         public bool SetRetriveLifterStatus(RetriveLifterStatus status, string code)
@@ -416,7 +481,7 @@ namespace AgvDispatchor
             try
             {
                 string sql = "select top 1 q.CarrierCode from LifterQueue q inner join Carriers c on q.CarrierCode = c.Code where c.Status = " +
-                    CarrierStatus.Init + " and q.Number = 0 and q.Code = '" + lifterCode + "'";
+                    (int)CarrierStatus.Init + " and q.Number = 0 and q.Code = '" + lifterCode + "'";
                 if (CONN.State == System.Data.ConnectionState.Open)
                 {
                     SqlCommand com = new SqlCommand(sql, CONN);
@@ -492,7 +557,18 @@ namespace AgvDispatchor
                     com.Dispose();
                     if (c != null && Convert.ToInt32(c) > 0)
                     {
-                        lifterCode = string.Empty;
+                        sql = "select Code from LifterQueue where CarrierCode = '" + carrierCode + "'";
+                        com = new SqlCommand(sql, CONN);
+                        c = com.ExecuteScalar();
+                        com.Dispose();
+                        if (c != null)
+                        {
+                            lifterCode = c.ToString();
+                        }
+                        else
+                        {
+                            lifterCode = string.Empty;
+                        }
                     }
                     else
                     {
@@ -561,7 +637,7 @@ namespace AgvDispatchor
         public bool SetRequestOnByDeviceID(string deviceID)
         {
             bool res = false;
-            string sql = "update Requests set RequestCode = " + (int)RequestCodeType.Oncall + " where DeviceCode = '" + deviceID + "'";
+            string sql = "update Requests set RequestCode = " + (int)RequestCodeType.Oncall + ", Status = 1 where DeviceCode = '" + deviceID + "'";
             if (CONN.State == System.Data.ConnectionState.Open)
             {
                 SqlCommand com = new SqlCommand(sql, CONN);
@@ -1036,38 +1112,50 @@ namespace AgvDispatchor
                                     //找出目标设备的单数区域中的前 (料车其中一侧的物料数量 - 料车中其中一侧已经响应请求的数量) 个请求
                                     sql = "select top " + (Material.TOTAL_MATERIAL_ONE_CAR / 2 - carrindex) + " * from Requests where RequestCode = 1 and " +
                                         "DeviceCode = " + (dCode + circle) + " and " +
-                                        "DeviceArea % 2 = 1 order by DeviceCode asc, DeviceArea " + order + ", DeviceIndex asc";
+                                        "DeviceArea % 2 = 0 order by DeviceCode asc, DeviceArea " + order + ", DeviceIndex asc";
                                     com = new SqlCommand(sql, CONN);
                                     SqlDataReader reader = com.ExecuteReader();
-                                    int count = 0;
+                                    List<Target> list = new List<Target>();
                                     if (reader != null && reader.HasRows)
                                     {
                                         while (reader.Read())
                                         {
-                                            int devCode = Convert.ToInt32(reader["DeviceCode"]);
-                                            int devArea = Convert.ToInt32(reader["DeviceArea"]);
-                                            int devIndex = Convert.ToInt32(reader["DeviceIndex"]);
-                                            //为料车左侧分配单数区域的请求
-                                            sql = "update Materials set TargetDeviceCode = " + devCode + ", TargetDeviceArea = " + devArea + ", TargetDeviceIndex = " + devIndex +
-                                                " where CarrierCode = '" + carrCode + "' and Status = " + (int)MaterialStatus.Carrier + 
-                                                " and CarrierIndex = " + carrindex;
-                                            SqlCommand com1 = new SqlCommand(sql, CONN);
-                                            com1.ExecuteNonQuery();
-                                            com1.Dispose();
-                                            //为料车右侧分配双数区域的请求
-                                            sql = "update Materials set TargetDeviceCode = " + devCode + ", TargetDeviceArea = " + (devArea + 1) + ", TargetDeviceIndex = " + devIndex +
-                                                " where CarrierCode = '" + carrCode + "' and Status = " + (int)MaterialStatus.Carrier + 
-                                                " and CarrierIndex = " + (Material.TOTAL_MATERIAL_ONE_CAR / 2 + carrindex);
-                                            SqlCommand com2 = new SqlCommand(sql, CONN);
-                                            com2.ExecuteNonQuery();
-                                            com2.Dispose();
-                                            carrindex++;
-                                            count++;
+                                            Target tar = new Target();
+                                            tar.code = Convert.ToInt32(reader["DeviceCode"]);
+                                            tar.area = Convert.ToInt32(reader["DeviceArea"]);
+                                            tar.index = Convert.ToInt32(reader["DeviceIndex"]);
+                                            list.Add(tar);
                                         }
                                     }
                                     reader.Close();
                                     com.Dispose();
-                                    total_materials -= count * 2;
+                                    for (int i = 0; i < list.Count; i++)
+                                    {
+                                        //为料车左侧分配单数区域的请求
+                                        sql = "update Materials set TargetDeviceCode = " + list[i].code + ", TargetDeviceArea = " + list[i].area + ", TargetDeviceIndex = " + list[i].index +
+                                            " where CarrierCode = '" + carrCode + "' and Status = " + (int)MaterialStatus.Carrier +
+                                            " and CarrierIndex = " + carrindex;
+                                        SqlCommand com1 = new SqlCommand(sql, CONN);
+                                        com1.ExecuteNonQuery();
+                                        com1.Dispose();
+                                        //为料车右侧分配双数区域的请求
+                                        sql = "update Materials set TargetDeviceCode = " + list[i].code + ", TargetDeviceArea = " + (list[i].area + 1) + ", TargetDeviceIndex = " + list[i].index +
+                                            " where CarrierCode = '" + carrCode + "' and Status = " + (int)MaterialStatus.Carrier +
+                                            " and CarrierIndex = " + (Material.TOTAL_MATERIAL_ONE_CAR / 2 + carrindex);
+                                        SqlCommand com2 = new SqlCommand(sql, CONN);
+                                        com2.ExecuteNonQuery();
+                                        com2.Dispose();
+                                        //响应物料请求，修改请求列表
+                                        sql = "UPDATE Requests SET RequestCode = 3 WHERE DeviceCode = " + list[i].code + 
+                                            " and (DeviceArea = " + list[i].area + " or DeviceArea = " + (list[i].area + 1) + ") and DeviceIndex = " + list[i].index;
+                                        SqlCommand com3 = new SqlCommand(sql, CONN);
+                                        com3.ExecuteNonQuery();
+                                        com3.Dispose();
+
+                                        carrindex++;
+                                    }
+
+                                    total_materials -= list.Count * 2;
                                         
                                     if (dCode + circle == 16)
                                     {
@@ -1089,20 +1177,23 @@ namespace AgvDispatchor
                             "TargetDeviceCode asc, TargetDeviceArea asc, TargetDeviceIndex asc";
                         com = new SqlCommand(sql, CONN);
                         SqlDataReader r = com.ExecuteReader();
+                        int tCode = 0;
+                        int tArea = 0;
+                        int tIndex = 0;
                         if (r != null && r.HasRows)
                         {
                             while (r.Read())
                             {
-                                int tCode = Convert.ToInt32(r["TargetDeviceCode"]);
-                                int tArea = Convert.ToInt32(r["TargetDeviceArea"]);
-                                int tIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
-                                sql = "update Carriers set WorkDevice = " + tCode + ", WorkArea = " + tArea + ", WorkIndex = " + tIndex +
-                                    " where CarrierCode = '" + carrCode + "'";
-                                SqlCommand c1 = new SqlCommand(sql, CONN);
-                                c1.ExecuteNonQuery();
-                                c1.Dispose();
+                                tCode = Convert.ToInt32(r["TargetDeviceCode"]);
+                                tArea = Convert.ToInt32(r["TargetDeviceArea"]);
+                                tIndex = Convert.ToInt32(r["TargetDeviceIndex"]);
                             }
                             r.Close();
+                            com.Dispose();
+                            sql = "update Carriers set WorkDevice = " + tCode + ", WorkArea = " + tArea + ", WorkIndex = " + tIndex +
+                                    " where Code = '" + carrCode + "'";
+                            com = new SqlCommand(sql, CONN);
+                            com.ExecuteNonQuery();
                             com.Dispose();
                         }
                         res = 0;
@@ -1585,5 +1676,12 @@ namespace AgvDispatchor
         }
         #endregion
         private SqlConnection CONN;
+    }
+
+    public struct Target
+    {
+        public int code;
+        public int area;
+        public int index;
     }
 }

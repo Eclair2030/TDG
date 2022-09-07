@@ -9,7 +9,10 @@ namespace AgvDispatchor
     public class Lifter
     {
         public Lifter()
-        { }
+        {
+            Motors = new LifterMotors();
+            Sensors = new LifterSensors();
+        }
 
         public string Code { get; set; }
         public int Type { get; set; }
@@ -17,10 +20,13 @@ namespace AgvDispatchor
         public string Parking { get; set; } //弃用
         public int QueuePosition { get; set; }
         public int Position { get; set; }
+        public int BufferPosition { get; set; }
 
         public delegate void SendMessage(string msg, MessageType mt);
         public SendMessage Message;
         public FmsAction Fms;
+        public LifterMotors Motors;
+        public LifterSensors Sensors;
 
         public void RetriveLifterAction(object obj)
         {
@@ -207,6 +213,16 @@ namespace AgvDispatchor
                     SupplyLifterStatus status = (SupplyLifterStatus)Convert.ToInt32(lifter.Status);
                     DbAccess db = new DbAccess();
                     string carrierCode = string.Empty;
+                    long sensors = 0;
+                    string strSensor = string.Empty;
+                    if (Sensors.ReadSensors(ref sensors))
+                    {
+                        strSensor = Convert.ToString(sensors, 2).PadLeft(16, '0');
+                    }
+                    else
+                    {
+                        Message("Supply lifter: " + lifter.Code + " read sensors fail", MessageType.Error);
+                    }
                     if (db.Open())
                     {
                         switch (status)
@@ -254,41 +270,73 @@ namespace AgvDispatchor
                                 {
                                     if (db.AssignMaterialsToLifter(lifter.Code))    //物料指派给升降机
                                     {
+                                        if (db.SetSupplyLifterStatus(SupplyLifterStatus.Pullin, lifter.Code))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Supply lifter: " + lifter.Code + " set status to Pullin fail", MessageType.Error);
+                                        }
                                     }
                                     else
                                     {
                                         Message("Assign Materials to " + lifter.Code + " fail", MessageType.Error);
                                     }
-
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Pullin, lifter.Code))
-                                    {
-                                    }
-                                    else
-                                    {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Pullin fail", MessageType.Error);
-                                    }
                                 }
                                 break;
                             case SupplyLifterStatus.Pullin:
-                                //电机去避让位
-                                if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoiding, lifter.Code))
+                                if (strSensor[LifterSensors.LupLimit] == LifterSensors.SensorOff && strSensor[LifterSensors.LupPos] == LifterSensors.SensorOff)
                                 {
+                                    if (Motors.Move(LifterMoveType.Up, LiterMove.Move))
+                                    {
+                                        if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoiding, lifter.Code))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Supply lifter: " + lifter.Code + " set status to Avoiding fail", MessageType.Error);
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    Message("Supply lifter: " + lifter.Code + " set status to Avoiding fail", MessageType.Error);
+                                    if (Motors.Move(LifterMoveType.Up, LiterMove.Stop))
+                                    {
+                                        if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoiding, lifter.Code))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Supply lifter: " + lifter.Code + " set status to Avoiding fail", MessageType.Error);
+                                        }
+                                    }
+                                }
+                                if (strSensor[LifterSensors.LupLimit] == LifterSensors.SensorOn)
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " Up to limits", MessageType.Exception);
                                 }
                                 break;
                             case SupplyLifterStatus.Avoiding:
-                                if (true)   //电机判断是否到达避让位
+                                if (strSensor[LifterSensors.LupLimit] == LifterSensors.SensorOff && strSensor[LifterSensors.LupPos] == LifterSensors.SensorOff)
                                 {
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoid, lifter.Code))
+                                    Motors.Move(LifterMoveType.Up, LiterMove.Move);
+                                }
+                                else
+                                {
+                                    if (Motors.Move(LifterMoveType.Up, LiterMove.Stop))
                                     {
+                                        if (db.SetSupplyLifterStatus(SupplyLifterStatus.Avoid, lifter.Code))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Supply lifter: " + lifter.Code + " set status to Avoid fail", MessageType.Error);
+                                        }
                                     }
-                                    else
-                                    {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Avoid fail", MessageType.Error);
-                                    }
+                                }
+                                if (strSensor[LifterSensors.LupLimit] == LifterSensors.SensorOn)
+                                {
+                                    Message("Supply lifter: " + lifter.Code + " Up to limits", MessageType.Exception);
                                 }
                                 break;
                             case SupplyLifterStatus.Avoid:
@@ -361,28 +409,13 @@ namespace AgvDispatchor
                                 }
                                 break;
                             case SupplyLifterStatus.Unload:
-                                break;
-                                if (false)   //用Sensor判断搬送车是否已离开
+                                //满载的Carrier离开时，Carrier会将Lifter的状态设置为Loading
+                                carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
+                                if (carrierCode != null && carrierCode != string.Empty)
                                 {
-                                    if (db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifter.Code))
-                                    {
-                                    }
-                                    else
-                                    {
-                                        Message("Supply lifter: " + lifter.Code + " set status to Loading fail", MessageType.Error);
-                                    }
-                                }
-                                else
-                                {
-                                    carrierCode = db.GetFirstCarrierInLifterQueuebyCode(lifter.Code, (LifterType)Convert.ToInt32(lifter.Type));
-                                    if (carrierCode != null && carrierCode != string.Empty)
+                                    if (db.GetCarrierStatus(carrierCode) == (int)CarrierStatus.Initing)
                                     {
                                         db.SetCarrierStatus(carrierCode, CarrierStatus.Full);
-                                        db.LifterQueueDeleteZero(lifter.Code);
-                                    }
-                                    else
-                                    {
-                                        Message("Supply lifter: " + lifter.Code + " get carrier code fail at unload position", MessageType.Error);
                                     }
                                 }
                                 break;

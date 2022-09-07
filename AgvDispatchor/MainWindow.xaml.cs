@@ -73,12 +73,20 @@ namespace AgvDispatchor
             IO = new StoreIO();
             FMS = new FmsAction(ShowCallbackMessage);
 
-            TH_FIXED = new Thread(FixedAction);
-            TH_FIXED.Start();
-            TH_CARRIER = new Thread(AllCarrierAction);
-            TH_CARRIER.Start();
+            //TH_FIXED = new Thread(FixedAction);
+            //TH_FIXED.Start();
+            //TH_CARRIER = new Thread(AllCarrierAction);
+            //TH_CARRIER.Start();
             //TH_ROBOT = new Thread(AllRobotAction);
             //TH_ROBOT.Start();
+
+            Type t = typeof(DLL);
+            System.Reflection.MethodInfo mi = t.GetMethod("Test");
+            if (mi != null)
+            {
+                object[] para = new object[1] {10};
+                ShowCallbackMessage(mi.Invoke(null, para).ToString(), MessageType.Default);
+            }
         }
 
         public void ShowCallbackMessage(string msg, MessageType mt)
@@ -94,6 +102,7 @@ namespace AgvDispatchor
 
         private void FixedAction()
         {
+            InitIOCard();
             DbAccess DB = new DbAccess();
             if (DB.Open())
             {
@@ -117,6 +126,7 @@ namespace AgvDispatchor
                                     lvLifters.Items.Add(item);
                                 }));
                                 LIFTERS[i].Message = ShowCallbackMessage;
+                                LIFTERS[i].Motors.Message = ShowCallbackMessage;
                                 LIFTERS[i].Fms = FMS;
                                 Thread thOneLift;
                                 if (LIFTERS[i].Type == (int)LifterType.Retrive)
@@ -150,6 +160,7 @@ namespace AgvDispatchor
                 ShowCallbackMessage("Lifter action data base open fail", MessageType.Error);
             }
             DB.Close();
+            CloseIOCard();
         }
 
         private void AllCarrierAction()
@@ -529,6 +540,37 @@ namespace AgvDispatchor
             }
             DB.Close();
 
+        }
+
+        private void InitIOCard()
+        {
+            int result = DLL.WY_Open(0, ref DLL.Device_IOCard);
+            long VersionNumber = 0;
+            if (result != 0)
+            {
+                ShowCallbackMessage("I/O Card is missing", MessageType.Error);
+            }
+            else
+            {
+                result = DLL.WY_GetCardVersion(DLL.Device_IOCard, ref VersionNumber);
+                if (result == 0) 
+                {
+                    ShowCallbackMessage("I/O Card version number is: " + VersionNumber + ", init success", MessageType.Result);
+                }
+                else
+                {
+                    ShowCallbackMessage("Communicate with I/O Card exception", MessageType.Error);
+                }
+            }
+        }
+
+        private void CloseIOCard()
+        {
+            int result = DLL.WY_Close(DLL.Device_IOCard);
+            if (result != 0)
+            {
+                ShowCallbackMessage("I/O Card close fail", MessageType.Error);
+            }
         }
 
         private void ShowCameraImage(int width, int height, int dpiX, int dpiY, PixelFormat pf, IntPtr data, int size, int stride)
@@ -1039,8 +1081,8 @@ namespace AgvDispatchor
 
         private void btnInfo_Click(object sender, RoutedEventArgs e)
         {
-            int str = FMS.GetAgvStation("8");
-            ShowCallbackMessage(str.ToString(), MessageType.Result);
+            string str = FMS.GetAllAgvInfo("8");
+            ShowCallbackMessage(str, MessageType.Result);
         }
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)

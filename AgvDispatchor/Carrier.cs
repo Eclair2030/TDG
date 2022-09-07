@@ -38,6 +38,7 @@ namespace AgvDispatchor
                 CarrierStatus st = (CarrierStatus)Convert.ToInt32(carrier.Status);
                 List<Material> materials = Db.GetMaterialsByCarrierCode(Code);
                 string lifterCode;
+                float currbattery = 0f;
                 switch (st)
                 {
                     case CarrierStatus.Retrieve:
@@ -98,92 +99,51 @@ namespace AgvDispatchor
                         }
                         else
                         {
-                            //HttpWebRequest 送料去设备
-                            if (Db.SetCarrierStatus(Code, CarrierStatus.Transport))
+                            lifterCode = Db.GetLiftersByCarrier(Code);
+                            for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
                             {
-                                if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
+                                if (MainWindow.LIFTERS[i].Code == lifterCode)
                                 {
-                                    int pos = Db.GetCarrierTargetPosition(Code);
-                                    if (pos == -1)
+                                    if (fms.AgvMove(Code, MainWindow.LIFTERS[i].BufferPosition) == FmsActionResult.Success)
                                     {
-                                        Message("Carrier: " + Code + " get target position fail", MessageType.Error);
-                                        break;
-                                    }
-                                    int cur = fms.GetAgvStation(Code);
-                                    if (cur != -1 && cur != pos)
-                                    {
-                                        if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev0) == FmsActionResult.Success)
+                                        if (Db.SetCarrierStatus(Code, CarrierStatus.SupplyBuffer))
                                         {
-                                            if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
-                                            {
-                                                string robCode;
-                                                if (Db.SendRobotForCarrier(Code, 1, out robCode))
-                                                {
-                                                }
-                                                else
-                                                {
-                                                    Message("Send robot_1 for carrier: " + Code + "  fail", MessageType.Error);
-                                                }
-                                            }
                                         }
                                         else
                                         {
-                                            Message("Carrier: " + Code + " transport to " + pos + " fail", MessageType.Error);
+                                            Message("Carrier: " + Code + " set status to SupplyBuffer fail", MessageType.Error);
                                         }
                                     }
+                                    break;
                                 }
-                                else
-                                {
-                                }
-                            }
-                            else
-                            {
-                                Message("Empty Carrier: " + Code + " set status to Transport fail", MessageType.Error);
                             }
                         }
                         break;
                     case CarrierStatus.Transport:
-                        if (fms.GetAgvInfo(Code) == string.Empty)//need modify
+                        int pos = Db.GetCarrierTargetPosition(Code);    //获取上料位置时，加入是否已经上料完成的判断，获取不到位置作为上料完成信号
+                        if (pos == -1)
                         {
-                            if (Db.SetCarrierStatus(Code, CarrierStatus.Unloading))
-                            {
-                            }
-                            else
-                            {
-                                Message("Empty Carrier: " + Code + " set status to Unloading fail", MessageType.Error);
-                            }
+                            Message("Carrier: " + Code + " get target position fail", MessageType.Error);
+                            break;
                         }
-                        else
+                        if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev0) == FmsActionResult.Success)
                         {
-                            if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
+                            if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
                             {
-                                int pos = Db.GetCarrierTargetPosition(Code);    //获取上料位置时，加入是否已经上料完成的判断，获取不到位置作为上料完成信号
-                                if (pos == -1)
+                                string robCode;
+                                if (Db.SendRobotForCarrier(Code, 1, out robCode))
                                 {
-                                    Message("Carrier: " + Code + " get target position fail", MessageType.Error);
-                                    break;
-                                }
-                                int cur = fms.GetAgvStation(Code);
-                                if (cur != -1 && cur != pos)
-                                {
-                                    if (fms.AgvMove(Code, pos + (int)FmsCarrierPosition.Dev0) == FmsActionResult.Success)
+                                    if (Db.SetCarrierStatus(Code, CarrierStatus.Unloading))
                                     {
-                                        if (carrier.Robot_1 == null || carrier.Robot_1 == string.Empty)
-                                        {
-                                            string robCode;
-                                            if (Db.SendRobotForCarrier(Code, 1, out robCode))
-                                            {
-                                            }
-                                            else
-                                            {
-                                                Message("Send robot_1 for carrier: " + Code + "  fail", MessageType.Error);
-                                            }
-                                        }
                                     }
                                     else
                                     {
-                                        Message("Carrier: " + Code + " transport to " + pos + " fail", MessageType.Error);
+                                        Message("Empty Carrier: " + Code + " set status to Unloading fail", MessageType.Error);
                                     }
+                                }
+                                else
+                                {
+                                    Message("Send robot_1 for carrier: " + Code + "  fail", MessageType.Error);
                                 }
                             }
                         }
@@ -232,36 +192,22 @@ namespace AgvDispatchor
                         }
                         break;
                     case CarrierStatus.Idle:
-                        float battery;
-                        if (float.TryParse(carrier.Battery, out battery))
+                        currbattery = fms.GetAgvBattery(Code);
+                        Message("Carrier: " + Code + " current battery " + currbattery, MessageType.Default);
+                        if (LOW_POWER >= currbattery)
                         {
-                            if (LOW_POWER >= battery)
+                            if (MainWindow.BATTERYS.Count > 0)
                             {
-                                if (Db.AddAGVToChargeQueue(Code))
+                                if (fms.AgvMove(Code, MainWindow.BATTERYS[0].QueuePosition) == FmsActionResult.Success)
                                 {
                                     if (Db.SetCarrierStatus(Code, CarrierStatus.Charge))
                                     {
-                                        if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
+                                        if (Db.AddAGVToChargeQueue(Code))
                                         {
-                                            int pos = -1;
-                                            if (MainWindow.BATTERYS.Count > 0)
-                                            {
-                                                pos = MainWindow.BATTERYS[0].QueuePosition;
-                                            }
-                                            if (pos == -1)
-                                            {
-                                                break;
-                                            }
-                                            if (fms.AgvMove(Code, pos) == FmsActionResult.Success)
-                                            {
-                                            }
-                                            else
-                                            {
-                                                Message("Carrier: " + Code + " move to charge queue fail", MessageType.Error);
-                                            }
                                         }
                                         else
                                         {
+                                            Message("Carrier: " + Code + " add to charge queue fail", MessageType.Error);
                                         }
                                     }
                                     else
@@ -269,28 +215,20 @@ namespace AgvDispatchor
                                         Message("Carrier: " + Code + " set status to Charge fail", MessageType.Error);
                                     }
                                 }
-                                else
-                                {
-                                    Message("Carrier: " + Code + " add to charge queue fail", MessageType.Error);
-                                }
-                            }
-                            else
-                            {
-                                if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
-                                {
-                                    if (Db.SetCarrierStatus(Code, CarrierStatus.Ready))
-                                    {
-                                    }
-                                    else
-                                    {
-                                        Message("Carrier: " + Code + " set status to Ready fail", MessageType.Error);
-                                    }
-                                }
                             }
                         }
                         else
                         {
-                            Message("Carrier: " + Code + " battery data error", MessageType.Error);
+                            if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
+                            {
+                                if (Db.SetCarrierStatus(Code, CarrierStatus.Ready))
+                                {
+                                }
+                                else
+                                {
+                                    Message("Carrier: " + Code + " set status to Ready fail", MessageType.Error);
+                                }
+                            }
                         }
                         break;
                     case CarrierStatus.Ready:
@@ -317,9 +255,31 @@ namespace AgvDispatchor
                         }
                         else
                         {
-                            if (lifterCode == string.Empty)
+                            if (lifterCode != null && lifterCode != string.Empty)
                             {
-                                Message("Add Carrier: " + Code + " is already in queue", MessageType.Default);
+                                //Message("Add Carrier: " + Code + " is already in queue", MessageType.Default);
+                                //HttpWebRequest派去队列排队位置
+                                for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
+                                {
+                                    if (MainWindow.LIFTERS[i].Code == lifterCode)
+                                    {
+                                        if (fms.AgvMove(Code, MainWindow.LIFTERS[i].QueuePosition) == FmsActionResult.Success)
+                                        {
+                                            if (Db.SetCarrierStatus(Code, CarrierStatus.Init))
+                                            {
+                                            }
+                                            else
+                                            {
+                                                Message("Carrier: " + Code + " set status to init fail", MessageType.Error);
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            else if (lifterCode != string.Empty)
+                            {
+                                Message("Add Carrier: " + Code + " is already in queue, but query lifter code fail", MessageType.Default);
                             }
                             else
                             {
@@ -328,39 +288,52 @@ namespace AgvDispatchor
                         }
                         break;
                     case CarrierStatus.Charging:
-                        float currbattery;
-                        if (float.TryParse(carrier.Battery, out currbattery))
+                        currbattery = fms.GetAgvBattery(Code);
+                        if (HIGH_POWER <= currbattery)
                         {
-                            if (HIGH_POWER <= currbattery)
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Idle))
                             {
-                                if (Db.SetCarrierStatus(Code, CarrierStatus.Idle))
+                                if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
                                 {
-                                    if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
+                                    if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
                                     {
-                                        if (fms.AgvMove(Code, (int)FmsCarrierPosition.Idle) == FmsActionResult.Success)
-                                        {
-                                        }
-                                        else
-                                        {
-                                            Message("Carrier: " + Code + " move to ready area fail", MessageType.Error);
-                                        }
                                     }
                                     else
                                     {
+                                        Message("Carrier: " + Code + " move to ready area fail", MessageType.Error);
                                     }
                                 }
                                 else
                                 {
-                                    Message("Empty Carrier: " + Code + " set status to Idle fail", MessageType.Error);
                                 }
                             }
                             else
                             {
+                                Message("Empty Carrier: " + Code + " set status to Idle fail", MessageType.Error);
                             }
                         }
                         else
                         {
-                            Message("Carrier: " + Code + " battery data error", MessageType.Error);
+                        }
+                        break;
+                    case CarrierStatus.SupplyBuffer:
+                        //送料去设备
+                        lifterCode = Db.GetLiftersByCarrier(Code);
+                        if (Db.SetSupplyLifterStatus(SupplyLifterStatus.Loading, lifterCode))
+                        {
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Transport))
+                            {
+                                lifterCode = Db.GetLiftersByCarrier(Code);
+                                Db.LifterQueueDeleteZero(lifterCode);
+                            }
+                            else
+                            {
+                                Message("Carrier: " + Code + " set status to Transport fail", MessageType.Error);
+                            }
+                        }
+                        else
+                        {
+                            Message("Set lifter: " + lifterCode + " status to Loading fail", MessageType.Error);
                         }
                         break;
                     default:
@@ -386,5 +359,7 @@ namespace AgvDispatchor
         Ready = 9,                      //就绪状态，可以被来料升降机队列调用，由来料升降机队列置位到Init状态
         Charge = 10,                  //在充电队列中，由队列控制模块置位到其他状态
         Charging = 11,              //正在充电
+        SupplyBuffer = 12,         //从来料升降机接到满料，前往进/出的Buffer位置
+        RetrievBuffer = 13,         //从回收升降机放下空料，前往进/出的Buffer位置
     }
 }

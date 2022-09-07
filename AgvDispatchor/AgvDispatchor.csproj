@@ -86,6 +86,8 @@
     <Compile Include="DLL.cs" />
     <Compile Include="FmsAction.cs" />
     <Compile Include="Lifter.cs" />
+    <Compile Include="LifterMotors.cs" />
+    <Compile Include="LifterSensors.cs" />
     <Compile Include="Material.cs" />
     <Compile Include="MessageManager.cs" />
     <Compile Include="Request.cs" />

@@ -19,8 +19,9 @@ namespace AgvDispatchor
             INFO_URL = "http://192.168.30.101:8088/api/v2/vehicles/";
             SYS_STATE_NAME = "sys_state";
             SYS_STATION_NAME = "cur_station_no";
+            SYS_BATTERY = "battery";
             Message = sm;
-            MAP_ID = 19;
+            MAP_ID = 22;
             MOVING = false;
         }
 
@@ -29,7 +30,9 @@ namespace AgvDispatchor
             FmsActionResult result = FmsActionResult.Default;
             if (GetAgvInfo(agvCode) == AgvState.IDLE.ToString())
             {
-                if (GetAgvStation(agvCode) != position)
+                int cu = GetAgvStation(agvCode);
+                Message("Agv: " + agvCode + " current station no.:" + cu, MessageType.Default);
+                if (cu != position)
                 {
                     lock (OBJ)
                     {
@@ -71,6 +74,11 @@ namespace AgvDispatchor
             return result;
         }
 
+        public string GetAllAgvInfo(string agvCode)
+        {
+            return GetResponse(agvCode, INFO_URL);
+        }
+
         public string GetAgvInfo(string agvCode)
         {
             return GetAgvInfoByName(GetResponse(agvCode, INFO_URL), SYS_STATE_NAME);
@@ -79,9 +87,16 @@ namespace AgvDispatchor
 
         public int GetAgvStation(string agvCode)
         {
-            int pos = -1;
+            int pos;
             int.TryParse(GetAgvInfoByName(GetResponse(agvCode, INFO_URL), SYS_STATION_NAME), out pos);
             return pos;
+        }
+
+        public float GetAgvBattery(string agvCode)
+        {
+            float bat;
+            float.TryParse(GetAgvInfoByName(GetResponse(agvCode, INFO_URL), SYS_BATTERY), out bat);
+            return bat;
         }
 
         private string MakeCarrierMoveRequestPostBody(string agvCode, int dest)
@@ -167,9 +182,11 @@ namespace AgvDispatchor
                     string[] strAry = stream.Replace("{", "").Replace("}", "").Split(',');
                     for (int i = 0; i < strAry.Length; i++)
                     {
-                        if (strAry[i].Contains(name))
+                        string[] pare = strAry[i].Replace("\"", "").Split(':');
+                        if (pare[0] == name)
                         {
-                            status = strAry[i].Substring(strAry[i].IndexOf(':') + 1).Replace("\"", "");
+                            status = pare[1];
+                            break;
                         }
                     }
                 }
@@ -181,7 +198,7 @@ namespace AgvDispatchor
             return status;
         }
 
-        private string CONTENT_TYPE, USER_AGENT, TOKEN, MOVE_URL, INFO_URL, SYS_STATE_NAME, SYS_STATION_NAME;
+        private string CONTENT_TYPE, USER_AGENT, TOKEN, MOVE_URL, INFO_URL, SYS_STATE_NAME, SYS_STATION_NAME, SYS_BATTERY;
         private int MAP_ID;
         private bool MOVING;
         private static object OBJ = new object();

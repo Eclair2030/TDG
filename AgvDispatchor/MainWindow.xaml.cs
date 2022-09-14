@@ -46,6 +46,8 @@ namespace AgvDispatchor
         string SELECT_CARRIER_CODE, SELECT_ROBOT_CODE, SELECT_LIFTER_CODE;
         int SLEEP_TIME;
 
+        int AlignX, AlignY, AlignR;                 //use for test
+
         public MainWindow()
         {
             InitializeComponent();
@@ -54,6 +56,7 @@ namespace AgvDispatchor
             CARRIER_CIRCLE = ROBOT_CIRCLE = FIXED_CIRCLE = true;
             JOG_CIRCLE = false;
             SLEEP_TIME = 5000;
+            AlignX = AlignY = AlignR = 0;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -69,7 +72,7 @@ namespace AgvDispatchor
             //edge.NavigationCompleted += Edge_NavigationCompleted;
             //edge.Source = new Uri("http://192.168.71.50");
 
-            MM = new MessageManager(tbMessage, slView, 20, 99);
+            MM = new MessageManager(tbMessage, slView, 27, 99);
             IO = new StoreIO();
             FMS = new FmsAction(ShowCallbackMessage);
 
@@ -77,16 +80,9 @@ namespace AgvDispatchor
             //TH_FIXED.Start();
             //TH_CARRIER = new Thread(AllCarrierAction);
             //TH_CARRIER.Start();
-            //TH_ROBOT = new Thread(AllRobotAction);
-            //TH_ROBOT.Start();
+            TH_ROBOT = new Thread(AllRobotAction);
+            TH_ROBOT.Start();
 
-            Type t = typeof(DLL);
-            System.Reflection.MethodInfo mi = t.GetMethod("Test");
-            if (mi != null)
-            {
-                object[] para = new object[1] {10};
-                ShowCallbackMessage(mi.Invoke(null, para).ToString(), MessageType.Default);
-            }
         }
 
         public void ShowCallbackMessage(string msg, MessageType mt)
@@ -974,6 +970,48 @@ namespace AgvDispatchor
             }
         }
 
+        private void LifterManualStart(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                int uid = Convert.ToInt32(lab.Uid);
+                Lifter item = lab.DataContext as Lifter;
+                if (item != null)
+                {
+                    item.Motors.ManualMove((LifterMoveType)uid, LiterMove.Move);
+                }
+            }
+        }
+
+        private void LifterManualStop(object sender, MouseButtonEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                int uid = Convert.ToInt32(lab.Uid);
+                Lifter item = lab.DataContext as Lifter;
+                if (item != null)
+                {
+                    item.Motors.ManualMove((LifterMoveType)uid, LiterMove.Stop);
+                }
+            }
+        }
+
+        private void LifterManualLeave(object sender, MouseEventArgs e)
+        {
+            Label lab = sender as Label;
+            if (lab != null)
+            {
+                int uid = Convert.ToInt32(lab.Uid);
+                Lifter item = lab.DataContext as Lifter;
+                if (item != null)
+                {
+                    item.Motors.ManualMove((LifterMoveType)uid, LiterMove.Stop);
+                }
+            }
+        }
+
         private void DegreeJog_Up(object sender, MouseButtonEventArgs e)
         {
             Label lab = sender as Label;
@@ -1039,16 +1077,15 @@ namespace AgvDispatchor
             //}
             for (int i = 0; i < ROBOTS.Count; i++)
             {
-                int x, y, r;
-                ROBOTS[i].Cam.GetLastFrame(SnapType.Staff, out x, out y, out r);
+                ROBOTS[i].Cam.GetLastFrame(SnapType.Empty, out AlignX, out AlignY, out AlignR);
                 int w = ROBOTS[i].Cam.GetWidth();
                 int h = ROBOTS[i].Cam.GetHeight();
-                if (x != 0 && y != 0 && r != 0)
+                if (AlignX != 0 && AlignY != 0 && AlignR != 0)
                 {
                     cavMark.Children.Clear();
-                    double cx = cavMark.Width * x / w;
-                    double cy = cavMark.Height * y / h;
-                    double cr = cavMark.Width * r / w;
+                    double cx = cavMark.Width * AlignX / w;
+                    double cy = cavMark.Height * AlignY / h;
+                    double cr = cavMark.Width * AlignR / w;
 
                     Line line1 = new Line();
                     line1.StrokeThickness = 1;
@@ -1070,6 +1107,9 @@ namespace AgvDispatchor
                     cavMark.Children.Add(line1);
                     cavMark.Children.Add(line2);
                     cavMark.Children.Add(elp);
+                    ShowCallbackMessage("X: " + AlignX, MessageType.Result);
+                    ShowCallbackMessage("Y: " + AlignY, MessageType.Result);
+                    ShowCallbackMessage("R: " + AlignR, MessageType.Result);
                 }
                 else
                 {
@@ -1079,10 +1119,193 @@ namespace AgvDispatchor
             }
         }
 
+        private void StartTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    RobotPoint tar = ROBOTS[0].ReadPointList("Dwait3");
+                    if (tar != null)
+                    {
+                        ShowCallbackMessage("X: " + tar.X, MessageType.Result);
+                        ShowCallbackMessage("Y: " + tar.Y, MessageType.Result);
+                        ShowCallbackMessage("Z: " + tar.Z, MessageType.Result);
+                        ShowCallbackMessage("RX: " + tar.RX, MessageType.Result);
+                        ShowCallbackMessage("RY: " + tar.RY, MessageType.Result);
+                        ShowCallbackMessage("RZ: " + tar.RZ, MessageType.Result);
+                        ROBOTS[0].MoveL(tar);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void StopTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    ROBOTS[0].Stop();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void DownTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    RobotPoint tar = ROBOTS[0].ReadPointList("Dpull3");
+                    ShowCallbackMessage("X: " + tar.X, MessageType.Result);
+                    ShowCallbackMessage("Y: " + tar.Y, MessageType.Result);
+                    ShowCallbackMessage("Z: " + tar.Z, MessageType.Result);
+                    AlignX = AlignX - 791;     //791
+                    AlignY = 627 - AlignY;    //627
+                    tar.X = tar.X + AlignX * ROBOTS[0].Cam.F_RES;
+                    tar.Z = tar.Z + AlignY * ROBOTS[0].Cam.F_RES;
+                    ShowCallbackMessage("X: " + tar.X, MessageType.Result);
+                    ShowCallbackMessage("Y: " + tar.Y, MessageType.Result);
+                    ShowCallbackMessage("Z: " + tar.Z, MessageType.Result);
+                    
+                    ROBOTS[0].MoveL(tar);
+                    AlignX = AlignY = AlignR = 0;
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void UpTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    RobotPoint curr = ROBOTS[0].ReadActPos();
+                    if (curr != null)
+                    {
+                        curr.Z += 50;
+                        ROBOTS[0].MoveL(curr);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void PullOutTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    RobotPoint curr = ROBOTS[0].ReadActPos();
+                    if (curr != null)
+                    {
+                        curr.Y -= 400;
+                        ROBOTS[0].MoveL(curr);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void PutTest_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ROBOTS != null)
+                {
+                    RobotPoint tar = ROBOTS[0].ReadPointList("DPre3");
+                    ShowCallbackMessage("X: " + tar.X, MessageType.Result);
+                    ShowCallbackMessage("Y: " + tar.Y, MessageType.Result);
+                    ShowCallbackMessage("Z: " + tar.Z, MessageType.Result);
+                    AlignX = AlignX - 798;
+                    AlignY = 532 - AlignY;
+                    tar.X = tar.X + AlignX * ROBOTS[0].Cam.F_RES;
+                    tar.Z = tar.Z + AlignY * ROBOTS[0].Cam.F_RES;
+                    ShowCallbackMessage("X: " + tar.X, MessageType.Result);
+                    ShowCallbackMessage("Y: " + tar.Y, MessageType.Result);
+                    ShowCallbackMessage("Z: " + tar.Z, MessageType.Result);
+                    ROBOTS[0].MoveL(tar);
+                    AlignX = AlignY = AlignR = 0;
+
+                    RobotPoint curr = ROBOTS[0].ReadActPos();
+                    if (curr != null)
+                    {
+                        curr.Y += 520;
+                        ROBOTS[0].MoveL(curr);
+                        curr = ROBOTS[0].ReadActPos();
+                        if (curr != null)
+                        {
+                            curr.Z -= 50;
+                            ROBOTS[0].MoveL(curr);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         private void btnInfo_Click(object sender, RoutedEventArgs e)
         {
-            string str = FMS.GetAllAgvInfo("8");
-            ShowCallbackMessage(str, MessageType.Result);
+            for (int i = 0; i < ROBOTS.Count; i++)
+            {
+                ROBOTS[i].Cam.GetLastFrame(SnapType.Staff, out AlignX, out AlignY, out AlignR);
+                int w = ROBOTS[i].Cam.GetWidth();
+                int h = ROBOTS[i].Cam.GetHeight();
+                if (AlignX != 0 && AlignY != 0 && AlignR != 0)
+                {
+                    cavMark.Children.Clear();
+                    double cx = cavMark.Width * AlignX / w;
+                    double cy = cavMark.Height * AlignY / h;
+                    double cr = cavMark.Width * AlignR / w;
+
+                    Line line1 = new Line();
+                    line1.StrokeThickness = 1;
+                    line1.Stroke = new SolidColorBrush(Colors.Red);
+                    line1.X1 = cx - 5;
+                    line1.X2 = cx + 5;
+                    line1.Y1 = line1.Y2 = cy;
+                    Line line2 = new Line();
+                    line2.StrokeThickness = 1;
+                    line2.Stroke = new SolidColorBrush(Colors.Red);
+                    line2.X1 = line2.X2 = cx;
+                    line2.Y1 = cy - 5;
+                    line2.Y2 = cy + 5;
+                    Ellipse elp = new Ellipse();
+                    elp.StrokeThickness = 1;
+                    elp.Stroke = new SolidColorBrush(Colors.Blue);
+                    elp.Margin = new Thickness(cx - cr, cy - cr, 0, 0);
+                    elp.Width = elp.Height = cr * 2;
+                    cavMark.Children.Add(line1);
+                    cavMark.Children.Add(line2);
+                    cavMark.Children.Add(elp);
+                    ShowCallbackMessage("X: " + AlignX, MessageType.Result);
+                    ShowCallbackMessage("Y: " + AlignY, MessageType.Result);
+                    ShowCallbackMessage("R: " + AlignR, MessageType.Result);
+                    //769 552
+                }
+                else
+                {
+                    ShowCallbackMessage("staff find error", MessageType.Error);
+                }
+                break;
+            }
         }
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)

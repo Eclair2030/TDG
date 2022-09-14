@@ -1,6 +1,7 @@
 ﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
 #include "pch.h"
 #include "Staff.h"
+#include "Empty.h"
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -26,6 +27,25 @@ extern "C" _declspec(dllexport) int _stdcall FindStaff(MESSAGE_SHOW Message, int
         Mat src(srcHeight, srcWidth, CV_8UC1, srcData);
         Staff stf;
         if (stf.FindEmptyStaff(&src, coordX, coordY, radius))
+        {
+            result = Success;
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        result = Fail;
+    }
+    return result;
+}
+
+extern "C" _declspec(dllexport) int _stdcall FindEmpty(MESSAGE_SHOW Message, int* coordX, int* coordY, int* radius, int srcWidth, int srcHeight, void* srcData)
+{
+    int result = Unknow;
+    try
+    {
+        Mat src(srcHeight, srcWidth, CV_8UC1, srcData);
+        Empty emp;
+        if (emp.FindEmpty(&src, coordX, coordY, radius))
         {
             result = Success;
         }

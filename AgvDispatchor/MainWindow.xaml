@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="TDG - MT AGV Dispatchor" Height="935" Width="1621" Closing="Window_Closing" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     <Grid>
-        <ScrollViewer x:Name="slView" Margin="1037,111,0,0" Width="500" HorizontalAlignment="Left" VerticalAlignment="Top" Height="410">
+        <ScrollViewer x:Name="slView" Margin="1040,330,0,0" Width="500" HorizontalAlignment="Left" VerticalAlignment="Top" Height="550">
             <TextBlock x:Name="tbMessage" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="2015" Width="482" Background="#FFEFEFEF" FontSize="16"/>
         </ScrollViewer>
         <Button x:Name="btnStart" Content="Start" HorizontalAlignment="Left" Margin="31,10,0,0" VerticalAlignment="Top" Height="55" Width="140"/>
@@ -24,7 +24,14 @@
         </ComboBox>
         <Button x:Name="btnTurn" Content="Turn" HorizontalAlignment="Left" Margin="500,10,0,0" VerticalAlignment="Top" Height="55" Width="140" Click="btnTurn_Click"/>
         <Button x:Name="btnTest" Content="test" HorizontalAlignment="Left" Margin="660,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="btnTest_Click"/>
-        <Button x:Name="btnInfo" Content="info" HorizontalAlignment="Left" Margin="730,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="btnInfo_Click"/>
+        <Button x:Name="btnInfo" Content="staff" HorizontalAlignment="Left" Margin="730,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="btnInfo_Click"/>
+        <Button x:Name="btnSnapPos" Content="First" HorizontalAlignment="Left" Margin="980,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="StartTest_Click"/>
+        <Button x:Name="btnStopRobot" Content="Stop" HorizontalAlignment="Left" Margin="1048,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="StopTest_Click"/>
+        <Button x:Name="btnDevDown" Content="Devdown" HorizontalAlignment="Left" Margin="1128,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="DownTest_Click"/>
+        <Button x:Name="btnDevUp" Content="Devup" HorizontalAlignment="Left" Margin="1198,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="UpTest_Click"/>
+        <Button x:Name="btnDevPullOut" Content="Out" HorizontalAlignment="Left" Margin="1270,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="PullOutTest_Click"/>
+        <Button x:Name="btnPut" Content="Put" HorizontalAlignment="Left" Margin="1350,10,0,0" VerticalAlignment="Top" Height="55" Width="60" Click="PutTest_Click"/>
+        
         <Label Content="Carriers" HorizontalAlignment="Left" Margin="31,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
         <ListView x:Name="lvCarriers" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="30,110,0,0" Height="200" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvCarriers_SelectionChanged">
             <ListView.View>
@@ -37,15 +44,15 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Robots" HorizontalAlignment="Left" Margin="410,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
-        <ListView x:Name="lvRobots" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="410,110,0,0" Height="200" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvRobots_SelectionChanged">
+        <Label Content="Robots" HorizontalAlignment="Left" Margin="395,70,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
+        <ListView x:Name="lvRobots" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="395,110,0,0" Height="200" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvRobots_SelectionChanged">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
                     <GridViewColumn Header="Status" Width="60" DisplayMemberBinding="{Binding Status}"/>
                     <GridViewColumn Header="Battery" Width="60" DisplayMemberBinding="{Binding Battery}"/>
                     <GridViewColumn Header="Coordi" Width="60" DisplayMemberBinding="{Binding Coordination}"/>
-                    <GridViewColumn Header="Process" Width="60" DisplayMemberBinding="{Binding Process}"/>
+                    <!--<GridViewColumn Header="Process" Width="60" DisplayMemberBinding="{Binding Process}"/>-->
                     <GridViewColumn Header="DevIndex" Width="60" DisplayMemberBinding="{Binding DeviceIndex}"/>
                     <GridViewColumn Header="CarIndex" Width="60" DisplayMemberBinding="{Binding CarrierIndex}"/>
                     <GridViewColumn Header="Buffer1" Width="60" DisplayMemberBinding="{Binding Buffer1}"/>
@@ -54,14 +61,50 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Lifters" HorizontalAlignment="Left" Margin="1041,534,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
-        <ListView x:Name="lvLifters" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1041,574,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvLifters_SelectionChanged">
+        <Label Content="Lifters" HorizontalAlignment="Left" Margin="950,72,0,0" VerticalAlignment="Top" Width="209" FontSize="24"/>
+        <ListView x:Name="lvLifters" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="950,110,0,0" Height="200" HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="lvLifters_SelectionChanged">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
                     <GridViewColumn Header="Type" Width="70" DisplayMemberBinding="{Binding Type}"/>
                     <GridViewColumn Header="Status" Width="70" DisplayMemberBinding="{Binding Status}"/>
-                    <GridViewColumn Header="Parking" Width="70" DisplayMemberBinding="{Binding Parking}"/>
+                    <GridViewColumn Header="Up" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Up" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" Width="40" FontSize="10" Background="#FFE2E2E2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MouseDown="LifterManualStart" MouseUp="LifterManualStop" MouseLeave="LifterManualLeave" Uid="0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Down" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Down" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" Width="40" FontSize="10" Background="#FFE2E2E2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MouseDown="LifterManualStart" MouseUp="LifterManualStop" MouseLeave="LifterManualLeave"  Uid="1"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Pull" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Pull" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" Width="40" FontSize="10" Background="#FFE2E2E2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MouseDown="LifterManualStart" MouseUp="LifterManualStop" MouseLeave="LifterManualLeave" Uid="3"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Push" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Push" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" Width="40" FontSize="10" Background="#FFE2E2E2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MouseDown="LifterManualStart" MouseUp="LifterManualStop" MouseLeave="LifterManualLeave" Uid="2"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <!--<GridViewColumn Header="Parking" Width="70" DisplayMemberBinding="{Binding Parking}"/>-->
                 </GridView>
             </ListView.View>
         </ListView>
@@ -107,12 +150,12 @@
         <Label x:Name="labIndex33" Content="1 - 20" HorizontalAlignment="Left" Margin="200,800,0,0" VerticalAlignment="Top" Width="160" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex34" Content="1 - 22" HorizontalAlignment="Left" Margin="200,830,0,0" VerticalAlignment="Top" Width="160" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
         <Label x:Name="labIndex35" Content="1 - 20" HorizontalAlignment="Left" Margin="200,860,0,0" VerticalAlignment="Top" Width="160" FontSize="12" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="Black" BorderThickness="1,1,1,1"/>
-        <Label x:Name="labSelectLifterCode" Content="Lifter Code:" HorizontalAlignment="Left" Margin="1345,545,0,0" VerticalAlignment="Top" Width="206" FontSize="16"/>
-        <ListView x:Name="lvLifterQueue" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1343,574,0,0" Height="300" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Label x:Name="labSelectLifterCode" Content="Lifter Code:" HorizontalAlignment="Left" Margin="1375,83,0,0" VerticalAlignment="Top" Width="206" FontSize="16"/>
+        <ListView x:Name="lvLifterQueue" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="1375,110,0,0" Height="200" HorizontalAlignment="Left" VerticalAlignment="Top">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Number" Width="100" DisplayMemberBinding="{Binding Number}"/>
-                    <GridViewColumn Header="Carrier Code" Width="100" DisplayMemberBinding="{Binding CarrierCode}"/>
+                    <GridViewColumn Header="Number" Width="80" DisplayMemberBinding="{Binding Number}"/>
+                    <GridViewColumn Header="Carrier Code" Width="80" DisplayMemberBinding="{Binding CarrierCode}"/>
                 </GridView>
             </ListView.View>
         </ListView>
@@ -217,7 +260,7 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        
+
 
 
 

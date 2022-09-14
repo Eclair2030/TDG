@@ -15,6 +15,7 @@ namespace AgvDispatchor
     {
         public VisionCamera(RenderImage RendImg)
         {
+            F_RES = 62f / 225f;
             ShowImage = RendImg;
         }
 
@@ -29,11 +30,21 @@ namespace AgvDispatchor
                 statusRet = Cam.PixelFormat.Set(uEye.Defines.ColorMode.Mono8);
                 if (statusRet == uEye.Defines.Status.Success)
                 {
-                    Cam.Timing.PixelClock.Set(35);
-                    Cam.Timing.Exposure.Set(25);
-                    Cam.Timing.Framerate.Set(16);
+                    Cam.Timing.PixelClock.Set(15);
+                    Cam.Timing.Exposure.Set(30);
+                    Cam.Timing.Framerate.Set(7);
+                    Cam.Gamma.Software.Set(0);
+                    Cam.Gamma.Hardware.SetEnable(false);
+                    //Cam.Gain.Hardware.Boost.SetEnable(false);
+                    Cam.Gain.Hardware.Scaled.SetMaster(40);
+                    //Cam.Gain.Hardware.Factor.SetMaster(40);
+                    //Cam.Gain.Hardware.Factor.SetRed(0);
+                    //Cam.Gain.Hardware.Factor.SetGreen(0);
+                    //Cam.Gain.Hardware.Factor.SetBlue(0);
+                    //Cam.BlackLevel.SetOffset(90);
                     int x, y;
                     Cam.Size.AOI.Get(out x, out y, out Width, out Height);
+                    Cam.Parameter.Save();
 
                     // Allocate Memory
                     statusRet = AllocImageMems();
@@ -45,6 +56,7 @@ namespace AgvDispatchor
                     if (statusRet != uEye.Defines.Status.Success)
                     {
                     }
+                    
 
                     // Start Live Video
                     statusRet = Cam.Acquisition.Capture();
@@ -169,6 +181,7 @@ namespace AgvDispatchor
                             DLL.FindStaff(null, out coordX, out coordY, out radius, w, h, frame);
                             break;
                         case SnapType.Empty:
+                            DLL.FindEmpty(null, out coordX, out coordY, out radius, w, h, frame);
                             break;
                         case SnapType.Full:
                             break;
@@ -207,6 +220,7 @@ namespace AgvDispatchor
         private Camera Cam;
         private int Width, Height;
         private RenderImage ShowImage;
+        public float F_RES;                           //62mm/225pixel
     }
 
     public enum SnapType

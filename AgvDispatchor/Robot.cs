@@ -600,6 +600,8 @@ namespace AgvDispatchor
                 Message("Start to connect to Camera on robot: " + Code, MessageType.Default);
                 if (Cam.CameraInit())
                 {
+                    Message("Camera width: " + Cam.GetWidth(), MessageType.Result);
+                    Message("Camera height: " + Cam.GetHeight(), MessageType.Result);
                     Message("Camera on robot: " + Code + " init success", MessageType.Result);
                 }
                 else
@@ -618,6 +620,39 @@ namespace AgvDispatchor
         public void CameraClose()
         {
             Cam.CameraClose();
+        }
+
+        public bool Stop()
+        {
+            bool result = false;
+            try
+            {
+                if (Paw != null && Paw.Connected)
+                {
+                    string msg = "GrpStop,0,;";
+                    Paw.Send(Encoding.ASCII.GetBytes(msg));
+                    byte[] data = new byte[Paw.ReceiveBufferSize];
+                    Paw.Receive(data);
+                    string[] msgArry = Encoding.ASCII.GetString(data).Split(',');
+                    if (msgArry[1] == "OK")
+                    {
+                        Message("Robot: " + Code + " stopped", MessageType.Result);
+                    }
+                    else
+                    {
+                        Message("Robot: " + Code + " stop move fail", MessageType.Error);
+                    }
+                }
+                else
+                {
+                    ArmInit();
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return result;
         }
 
         public bool MoveL(RobotPoint point)
@@ -1045,7 +1080,7 @@ namespace AgvDispatchor
 
         public RobotPoint ReadPointList(string name)
         {
-            RobotPoint point = new RobotPoint();
+            RobotPoint point = null;
             try
             {
                 if (Paw != null && Paw.Connected)
@@ -1055,7 +1090,31 @@ namespace AgvDispatchor
                     byte[] data = new byte[Paw.ReceiveBufferSize];
                     Paw.Receive(data);
                     string str = Encoding.ASCII.GetString(data);
-                    //string[] ary = Encoding.ASCII.GetString(data).Replace(";", "").Split(',');
+                    string[] ary = Encoding.ASCII.GetString(data).Replace(";", "").Split(',');
+                    if (ary[1] == "OK")
+                    {
+                        point = new RobotPoint();
+                        point.X = Convert.ToDouble(ary[8]);
+                        point.Y = Convert.ToDouble(ary[9]);
+                        point.Z = Convert.ToDouble(ary[10]);
+                        point.RX = Convert.ToDouble(ary[11]);
+                        point.RY = Convert.ToDouble(ary[12]);
+                        point.RZ = Convert.ToDouble(ary[13]);
+
+                        point.J1 = Convert.ToDouble(ary[2]);
+                        point.J2 = Convert.ToDouble(ary[3]);
+                        point.J3 = Convert.ToDouble(ary[4]);
+                        point.J4 = Convert.ToDouble(ary[5]);
+                        point.J5 = Convert.ToDouble(ary[6]);
+                        point.J6 = Convert.ToDouble(ary[7]);
+                    }
+                    //ReadPointList,OK,
+                    //-23.313000,-19.684000,106.177000,
+                    //-62.188000,-57.343000,133.624000,
+                    //241.116000,1169.093000,1478.798000,
+                    //89.457000,2.656000,-178.240000,
+                    //0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,-380.000000,-437.078000,-852.133000,-0.430000,0.474000,-66.967000,;
+                    //\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0
                 }
                 else
                 {

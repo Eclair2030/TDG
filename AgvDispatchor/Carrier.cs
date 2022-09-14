@@ -147,48 +147,45 @@ namespace AgvDispatchor
                                 }
                             }
                         }
+                        else      //没有料了，去回收升降机
+                        {
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Complete))
+                            {
+                            }
+                            else
+                            {
+                                Message("Empty Carrier: " + Code + " set status to Complete fail", MessageType.Error);
+                            }
+                        }
                         break;
                     case CarrierStatus.Complete:
-                        if (Db.SetCarrierStatus(Code, CarrierStatus.Retrieve))
+                        if (Db.AddCarrierToShortestQueue(LifterType.Retrive, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
                         {
-                            //string lifterCode;
-                            if (Db.AddCarrierToShortestQueue(LifterType.Retrive, Code, out lifterCode) && lifterCode != null && lifterCode != string.Empty)
+                            //HttpWebRequest派去队列排队位置
+                            for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
                             {
-                                //HttpWebRequest派去队列排队位置
-                                int liftPos = 1;
-                                for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
+                                if (MainWindow.LIFTERS[i].Code == lifterCode)
                                 {
-                                    if (MainWindow.LIFTERS[i].Code == lifterCode)
+                                    if (fms.AgvMove(Code, MainWindow.LIFTERS[i].QueuePosition) == FmsActionResult.Success)
                                     {
-                                        liftPos = MainWindow.LIFTERS[i].QueuePosition;
-                                    }
-                                }
-                                if (liftPos == -1)
-                                {
-                                    break;
-                                }
-                                if (fms.GetAgvInfo(Code) == AgvState.IDLE.ToString())
-                                {
-                                    if (fms.AgvMove(Code, liftPos) == FmsActionResult.Success)
-                                    {
+                                        if (Db.SetCarrierStatus(Code, CarrierStatus.Retrieve))
+                                        {
+                                        }
+                                        else
+                                        {
+                                            Message("Empty Carrier: " + Code + " set status to retrive fail", MessageType.Error);
+                                        }
                                     }
                                     else
                                     {
                                         Message("Carrier: " + Code + " move to shortest lifter queue fail", MessageType.Error);
                                     }
                                 }
-                                else
-                                {
-                                }
-                            }
-                            else
-                            {
-                                Message("Add Carrier: " + Code + " to shortest lifter queue fail", MessageType.Error);
                             }
                         }
                         else
                         {
-                            Message("Empty Carrier: " + Code + " set status to retrive fail", MessageType.Error);
+                            Message("Add Carrier: " + Code + " to shortest lifter queue fail", MessageType.Error);
                         }
                         break;
                     case CarrierStatus.Idle:
@@ -336,6 +333,45 @@ namespace AgvDispatchor
                             Message("Set lifter: " + lifterCode + " status to Loading fail", MessageType.Error);
                         }
                         break;
+                    case CarrierStatus.Empty:
+                        lifterCode = Db.GetLiftersByCarrier(Code);
+                        for (int i = 0; i < MainWindow.LIFTERS.Count; i++)
+                        {
+                            if (MainWindow.LIFTERS[i].Code == lifterCode)
+                            {
+                                if (fms.AgvMove(Code, MainWindow.LIFTERS[i].BufferPosition) == FmsActionResult.Success)
+                                {
+                                    if (Db.SetCarrierStatus(Code, CarrierStatus.RetrievBuffer))
+                                    {
+                                    }
+                                    else
+                                    {
+                                        Message("Carrier: " + Code + " set status to RetrievBuffer fail", MessageType.Error);
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    case CarrierStatus.RetrievBuffer:
+                        lifterCode = Db.GetLiftersByCarrier(Code);
+                        if (Db.SetRetriveLifterStatus(RetriveLifterStatus.Leave, lifterCode))
+                        {
+                            if (Db.SetCarrierStatus(Code, CarrierStatus.Idle))
+                            {
+                                lifterCode = Db.GetLiftersByCarrier(Code);
+                                Db.LifterQueueDeleteZero(lifterCode);
+                            }
+                            else
+                            {
+                                Message("Carrier: " + Code + " set status to Idle fail", MessageType.Error);
+                            }
+                        }
+                        else
+                        {
+                            Message("Set lifter: " + lifterCode + " status to Loading fail", MessageType.Error);
+                        }
+                        break;
                     default:
                         Message("Carrier: " + Code + " status data error", MessageType.Error);
                         break;
@@ -361,5 +397,6 @@ namespace AgvDispatchor
         Charging = 11,              //正在充电
         SupplyBuffer = 12,         //从来料升降机接到满料，前往进/出的Buffer位置
         RetrievBuffer = 13,         //从回收升降机放下空料，前往进/出的Buffer位置
+        Empty = 14,                     //回收升降机抬起空料车，Carrier处于空车状态
     }
 }

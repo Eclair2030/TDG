@@ -68,7 +68,7 @@ namespace AgvDispatchor
             }
             else
             {
-                //Message("Agv: " + agvCode + " is moving right now", MessageType.Default);
+                //Message("Agv: " + agvCode + " is moving right now", MessageType.Default);     V1234907695 755777478
                 result = FmsActionResult.Busy;
             }
             return result;

@@ -27,6 +27,9 @@
     <ClInclude Include="Staff.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Empty.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -36,6 +39,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Staff.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Empty.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
